@@ -142,7 +142,7 @@ module Alchemy
 
     def redirect_page(options={})
       defaults = {
-        :lang => (multi_language? ? @page.language_code : nil),
+        #:lang => (multi_language? ? @page.language_code : nil),
         :urlname => @page.urlname
       }
       options = defaults.merge(options)
