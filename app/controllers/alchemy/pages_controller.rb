@@ -102,16 +102,16 @@ module Alchemy
         redirect_page
       elsif @page.blank?
         raise_not_found_error
-      elsif multi_language? && params[:lang].blank?
-        redirect_page(:lang => session[:language_code])
+      #elsif multi_language? && params[:lang].blank?
+      #  redirect_page(:lang => session[:language_code])
       elsif multi_language? && params[:urlname].blank? && !params[:lang].blank? && configuration(:redirect_index)
-        redirect_page(:lang => params[:lang])
-      elsif configuration(:redirect_to_public_child) && !@page.public?
+      #  redirect_page(:lang => params[:lang])
+      #elsif configuration(:redirect_to_public_child) && !@page.public?
         redirect_to_public_child
       elsif params[:urlname].blank? && configuration(:redirect_index)
         redirect_page
-      elsif !multi_language? && !params[:lang].blank?
-        redirect_page
+      #elsif !multi_language? && !params[:lang].blank?
+      #  redirect_page
       elsif @page.has_controller?
         redirect_to main_app.url_for(@page.controller_and_action)
       else
