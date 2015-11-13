@@ -166,7 +166,7 @@ module Alchemy
 
       def visit
         @page.unlock!
-        redirect_to show_page_path(:urlname => @page.urlname, :lang => multi_language? ? @page.language_code : nil)
+        redirect_to show_page_path(:urlname => @page.urlname)
       end
 
       # Sets the page public and sweeps the page cache
