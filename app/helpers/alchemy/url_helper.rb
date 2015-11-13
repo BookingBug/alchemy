@@ -79,7 +79,6 @@ module Alchemy
     def show_page_path_params(page, optional_params={})
       raise ArgumentError, 'Page is nil' if page.nil?
       url_params = {:urlname => page.urlname}.update(optional_params)
-      multi_language? ? url_params.update(:lang => page.language_code) : url_params
     end
 
     # Returns the path for downloading an alchemy attachment
