@@ -37,7 +37,7 @@ module Alchemy
       else
         urlname = options[:urlname]
       end
-      alchemy.show_page_path({:urlname => urlname, :lang => multi_language? ? session[:language_code] : nil}.merge(options.except(:page_layout, :urlname, :lang)))
+      alchemy.show_page_path({:urlname => urlname}.merge(options.except(:page_layout, :urlname, :lang)))
     end
 
     # This helper returns a path to picture for use inside a image_tag helper.
