@@ -137,7 +137,7 @@ module Alchemy
           @url_prefix = current_server
         end
         if multi_language?
-          @url_prefix = "#{session[:language_code]}/"
+          #@url_prefix = "#{session[:language_code]}/"
         end
         render layout: !request.xhr?
       end

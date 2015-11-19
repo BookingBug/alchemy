@@ -13,7 +13,8 @@ module Alchemy
 
     def parse_sitemap_name(page)
       if multi_language?
-        pathname = "/#{session[:language_code]}/#{page.urlname}"
+        #pathname = "/#{session[:language_code]}/#{page.urlname}"
+        pathname = "/#{page.urlname}"
       else
         pathname = "/#{page.urlname}"
       end
