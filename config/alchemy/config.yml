@@ -33,7 +33,7 @@ redirect_to_public_child: true
 #
 #   cd ~/html/alchemy/current && RAILS_ENV=production rake ferret:rebuild_index
 #
-ferret: true
+ferret: false
 
 # === Page caching
 #
