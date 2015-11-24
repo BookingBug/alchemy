@@ -1,31 +1,14 @@
 module Alchemy
   class EssenceRichtext < ActiveRecord::Base
-
-    acts_as_essence(
-      :preview_text_column => :stripped_body
-    )
-
-    attr_accessible :do_not_index, :body, :public, :stripped_body
+    acts_as_essence preview_text_column: 'stripped_body'
 
     before_save :strip_content
 
+    def has_tinymce?
+      true
+    end
 
-    # Enable Ferret indexing.
-    #
-    # But only, if Ferret full text search is enabled (default).
-    #
-    # You can disable it in +config/alchemy/config.yml+
-    #
-    # if Config.get(:ferret) == true
-    #   require 'acts_as_ferret'
-    #   acts_as_ferret(:fields => { :stripped_body => {:store => :yes} }, :remote => false)
-    #   before_save { write_attribute(:do_not_index, description['do_not_index'] || false); return true }
-    #   def ferret_enabled?(is_bulk_index = false)
-    #     !do_not_index?
-    #   end
-    # end
-
-  private
+    private
 
     def strip_content
       self.stripped_body = strip_tags(self.body)
