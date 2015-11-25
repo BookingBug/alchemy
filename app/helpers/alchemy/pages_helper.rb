@@ -292,8 +292,6 @@ module Alchemy
     #   <title>Company - #{@page.title}</title>
     #   <meta name="description" content="Your page description">
     #   <meta name="keywords" content="cms, ruby, rubyonrails, rails, software, development, html, javascript, ajax">
-    #   <meta name="created" content="Tue Dec 16 10:21:26 +0100 2008">
-    #   <meta name="robots" content="index, follow">
     #
     def render_meta_data options={}
       if @page.blank?
@@ -324,8 +322,6 @@ module Alchemy
         #{render_title_tag(:prefix => options[:title_prefix], :seperator => options[:title_seperator])}
         #{render_meta_tag(:name => "description", :content => description)}
         #{render_meta_tag(:name => "keywords", :content => keywords)}
-        <meta name="created" content="#{@page.updated_at}">
-        <meta name="robots" content="#{robot}">
       )
       if @page.contains_feed?
         meta_string += %(
