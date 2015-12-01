@@ -1,14 +1,14 @@
 module Alchemy
   class EssenceRichtext < ActiveRecord::Base
-    acts_as_essence preview_text_column: 'stripped_body'
 
+    acts_as_essence(
+      :preview_text_column => :stripped_body
+    )
+
+    attr_accessible :do_not_index, :body, :public, :stripped_body
     before_save :strip_content
 
-    def has_tinymce?
-      true
-    end
-
-    private
+  private
 
     def strip_content
       self.stripped_body = strip_tags(self.body)
