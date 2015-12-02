@@ -324,8 +324,6 @@ module Alchemy
         #{render_title_tag(:prefix => options[:title_prefix], :seperator => options[:title_seperator])}
         #{render_meta_tag(:name => "description", :content => description)}
         #{render_meta_tag(:name => "keywords", :content => keywords)}
-        <meta name="created" content="#{@page.updated_at}">
-        <meta name="robots" content="#{robot}">
       )
       if @page.contains_feed?
         meta_string += %(
