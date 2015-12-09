@@ -13,13 +13,7 @@ module Alchemy
       if request.domain.include? 'co.uk'
         @language = Language.find 2
       end
-      # store language in session
-      store_language_in_session(@language)
-
-      # switch locale to selected language
-      ::I18n.locale = @language.code
-    end
-
+      
       # store language in session
       store_language_in_session(@language)
 
