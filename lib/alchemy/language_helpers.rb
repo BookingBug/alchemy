@@ -9,14 +9,16 @@ module Alchemy
     # Sets the language for rendering pages in pages controller.
     #
     def set_language(lang = nil)
-      if lang
-        @language = lang.is_a?(Language) ? lang : load_language_from(lang)
-      else
-        # find the best language and remember it for later
-        @language = load_language_from_params ||
-                    load_language_from_session ||
-                    load_language_default
+      @language = Language.find 3      
+      if request.domain.include? 'co.uk'
+        @language = Language.find 2
       end
+      # store language in session
+      store_language_in_session(@language)
+
+      # switch locale to selected language
+      ::I18n.locale = @language.code
+    end
 
       # store language in session
       store_language_in_session(@language)
