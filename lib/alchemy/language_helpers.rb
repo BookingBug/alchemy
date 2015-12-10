@@ -22,7 +22,7 @@ module Alchemy
       end
 
       if !@language
-        @language = request.domain.include?('co.uk') ? Language.find(2) : Language.find(3)
+        @language = request.domain.include?('co.uk') ? Language.where(country_code: 'uk').first : Language.where(country_code: 'us').first
       end
 
       # store language in session
