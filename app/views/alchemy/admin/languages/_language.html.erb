@@ -9,6 +9,12 @@
     <%= language.country_code %>
   </td>
   <td>
+    <%= language.code %>
+  </td>
+  <td>
+    <%= language.locale %>
+  </td>
+  <td>
     <%= language.frontpage_name %>
   </td>
   <td>
@@ -21,28 +27,22 @@
     <%= language.default? ? render_icon('true') : '' %>
   </td>
   <td class="tools">
-    <%- permitted_to?(:destroy, :alchemy_admin_languages) do -%>
-    <%= link_to_confirmation_window(
-      '',
-      _t("Are you sure?"),
-      alchemy.admin_language_path(language),
-      :title => _t("Delete"),
-      :class => "icon destroy"
-    ) -%>
-    <%- end -%>
-    <%- permitted_to?(:edit, :alchemy_admin_languages) do -%>
-    <%= link_to_overlay_window(
+  <%- if can?(:destroy, language) -%>
+    <%= delete_button resource_path(language) %>
+  <%- end -%>
+  <%- if can?(:edit, language) -%>
+    <%= link_to_dialog(
       '',
       alchemy.edit_admin_language_path(language),
       {
-        :title => _t("Edit"),
-        :size => "430xauto"
+        title: Alchemy.t("Edit"),
+        size: "430x415"
       },
       {
-        :class => "icon edit",
-        :title => _t("Edit")
+        class: "icon edit",
+        title: Alchemy.t("Edit")
       }
     ) -%>
-    <%- end -%>
+  <%- end -%>
   </td>
 </tr>

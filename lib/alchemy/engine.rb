@@ -1,41 +1,58 @@
 # Require globally used external libraries
-require 'coffee-rails'
+require 'actionpack/page_caching'
+require 'acts_as_list'
+require 'acts-as-taggable-on'
+require 'action_view/dependency_tracker'
+require 'active_model_serializers'
+require 'awesome_nested_set'
+require 'cancan'
 require 'compass-rails'
-require 'declarative_authorization'
-require 'dynamic_form'
+require 'dragonfly'
 require 'jquery-rails'
 require 'jquery-ui-rails'
 require 'kaminari'
-require 'rails3-jquery-autocomplete'
+require 'non-stupid-digest-assets'
+require 'ransack'
+require 'request_store'
+require 'responders'
 require 'sass-rails'
 require 'sassy-buttons'
+require 'simple_form'
+require 'select2-rails'
+require 'turbolinks'
 require 'userstamp'
 
 # Require globally used Alchemy mixins
-require 'alchemy/auth/engine'
-require 'alchemy/auth_accessors'
-require 'alchemy/config'
-require 'alchemy/errors'
-require 'alchemy/essence'
-require 'alchemy/ferret/search'
-require 'alchemy/filetypes'
-require 'alchemy/i18n'
-require 'alchemy/language_helpers'
-require 'alchemy/logger'
-require 'alchemy/modules'
-require 'alchemy/mount_point'
-require 'alchemy/name_conversions'
-require 'alchemy/page_layout'
-require 'alchemy/picture_attributes'
-require 'alchemy/resource'
-require 'alchemy/tinymce'
+require_relative './ability_helper'
+require_relative './admin/locale'
+require_relative './auth_accessors'
+require_relative './cache_digests/template_tracker'
+require_relative './config'
+require_relative './configuration_methods'
+require_relative './controller_actions'
+require_relative './errors'
+require_relative './essence'
+require_relative './filetypes'
+require_relative './forms/builder'
+require_relative './hints'
+require_relative './i18n'
+require_relative './logger'
+require_relative './modules'
+require_relative './mount_point'
+require_relative './name_conversions'
+require_relative './on_page_layout'
+require_relative './on_page_layout/callbacks_runner'
+require_relative './page_layout'
+require_relative './paths'
+require_relative './permissions'
+require_relative './picture_attributes'
+require_relative './ssl_protection'
+require_relative './resource'
+require_relative './tinymce'
+require_relative './touching'
 
 # Require hacks
-require 'alchemy/kaminari/scoped_pagination_url_helper'
-require File.join(File.dirname(__FILE__), '../extensions/action_view')
-
-# Require middleware
-require File.join(File.dirname(__FILE__), '../middleware/flash_session_cookie')
+require_relative './kaminari/scoped_pagination_url_helper'
 
 module Alchemy
   class Engine < Rails::Engine
@@ -43,40 +60,29 @@ module Alchemy
     engine_name 'alchemy'
     config.mount_at = '/'
 
-    # Enabling assets precompiling
-    initializer 'alchemy.assets' do |app|
-      app.config.assets.precompile += [
-        "alchemy/alchemy.js",
-        "alchemy/preview.js",
-        "alchemy/admin.css",
-        "alchemy/menubar.css",
-        "alchemy/menubar.js",
-        "alchemy/print.css",
-        "alchemy/tinymce_content.css",
-        "alchemy/tinymce_dialog.css",
-        "tiny_mce/*"
-      ]
+    initializer 'alchemy.dependency_tracker' do
+      [:erb, :slim, :haml].each do |handler|
+        ActionView::DependencyTracker.register_tracker(handler, CacheDigests::TemplateTracker)
+      end
     end
 
-    initializer 'alchemy.flash_cookie' do |config|
-      config.middleware.insert_after(
-        'ActionDispatch::Cookies',
-        Alchemy::Middleware::FlashSessionCookie,
-        ::Rails.configuration.session_options[:key]
-      )
+    initializer 'alchemy.non_digest_assets' do
+      NonStupidDigestAssets.whitelist += [/^tinymce\//]
     end
 
-    initializer "alchemy.add_authorization_rules" do
-      Alchemy::Auth::Engine.get_instance.load(File.join(File.dirname(__FILE__), '../..', 'config/authorization_rules.rb'))
-    end
-
+    # We need to reload each essence class in development mode on every request,
+    # so it can register itself as essence relation on Page and Element models
+    #
+    # @see lib/alchemy/essence.rb:71
     config.to_prepare do
-      ApplicationController.send(:include, Alchemy::LanguageHelpers)
+      unless Rails.configuration.cache_classes
+        essences = File.join(File.dirname(__FILE__), '../../app/models/alchemy/essence_*.rb')
+        Dir.glob(essences).each { |essence| load(essence) }
+      end
     end
 
     config.after_initialize do
-      require 'alchemy/userstamp'
+      require_relative './userstamp'
     end
-
   end
 end

@@ -1,5 +1,4 @@
 module Alchemy
-
   # This helper contains methods to render the +essence+ from an +Element+ +Content+.
   #
   # Essences have two kinds of partials. An +editor+ and a +view+ partial.
@@ -27,7 +26,6 @@ module Alchemy
   # And the +render_essence_editor_by_name+ helper for Alchemy backend views.
   #
   module EssencesHelper
-
     # Renders the +Essence+ view partial from +Element+ by name.
     #
     # Pass the name of the +Content+ from +Element+ as second argument.
@@ -47,32 +45,6 @@ module Alchemy
       render_essence_view(content, options, html_options)
     end
 
-    # Renders the +Essence+ view partial from given +Element+ and +Essence+ type.
-    #
-    # Pass the type of +Essence+ you want to render from +element+ as second argument.
-    #
-    # By default the first essence gets rendered. You may pass a different position value as third argument.
-    #
-    # == Example:
-    #
-    # This renders the first +Content+ with type of +EssencePicture+ from element.
-    #
-    #   <%= render_essence_view_by_type(element, "EssencePicture", 1, {:image_size => "120x80", :crop => true}) %>
-    #
-    def render_essence_view_by_type(element, type, position = 1, options = {}, html_options = {})
-      ActiveSupport::Deprecation.warn("Used deprecated render_essence_view_by_type helper. It will be removed in Alchemy v3.0. You can use render_essence_view_by_name instead.")
-      if element.blank?
-        warning('Element is nil')
-        return ""
-      end
-      if position == 1
-        content = element.content_by_type(type)
-      else
-        content = element.contents.find_by_essence_type_and_position(Alchemy::Content.normalize_essence_type(type), position)
-      end
-      render_essence_view(content, options, html_options)
-    end
-
     # Renders the +Esssence+ partial for given +Content+.
     #
     # The helper renders the view partial as default.
@@ -85,24 +57,21 @@ module Alchemy
     #
     # This Hash is available as +options+ local variable.
     #
-    #   :for_view => {}
-    #   :for_editor => {}
+    #   for_view: {}
+    #   for_editor: {}
     #
     def render_essence(content, part = :view, options = {}, html_options = {})
-      options = {:for_view => {}, :for_editor => {}}.update(options)
+      options = {for_view: {}, for_editor: {}}.update(options)
       if content.nil?
-        return part == :view ? "" : warning('Content is nil', _t(:content_not_found))
+        return part == :view ? "" : warning('Content is nil', Alchemy.t(:content_not_found))
       elsif content.essence.nil?
-        return part == :view ? "" : warning('Essence is nil', _t(:content_essence_not_found))
+        return part == :view ? "" : warning('Essence is nil', Alchemy.t(:content_essence_not_found))
       end
-      render(
-        :partial => "alchemy/essences/#{content.essence_partial_name}_#{part.to_s}",
-        :locals => {
-          :content => content,
-          :options => options["for_#{part}".to_sym],
-          :html_options => html_options
-        }
-      )
+      render partial: "alchemy/essences/#{content.essence_partial_name}_#{part}", locals: {
+        content: content,
+        options: options["for_#{part}".to_sym],
+        html_options: html_options
+      }
     end
 
     # Renders the +Esssence+ view partial for given +Content+.
@@ -115,47 +84,7 @@ module Alchemy
     #   :disable_link => true                          # You can surpress the link of an EssencePicture. Default false
     #
     def render_essence_view(content, options = {}, html_options = {})
-      render_essence(content, :view, {:for_view => options}, html_options)
+      render_essence(content, :view, {for_view: options}, html_options)
     end
-
-    # Renders a essence picture
-    #
-    def render_essence_picture_view(content, options, html_options)
-      options = {:show_caption => true, :disable_link => false}.update(options)
-      return if content.essence.picture.blank?
-      if content.essence.caption.present? && options[:show_caption]
-        caption = content_tag(:figcaption, content.essence.caption, :id => "#{dom_id(content.essence.picture)}_caption", :class => "image_caption")
-      end
-      img_tag = image_tag(
-        show_alchemy_picture_path(content.essence.picture,
-          options.merge(
-            :size => options.delete(:image_size),
-            :crop_from => options[:crop] && !content.essence.crop_from.blank? ? content.essence.crop_from : nil,
-            :crop_size => options[:crop] && !content.essence.crop_size.blank? ? content.essence.crop_size : nil
-          ).delete_if { |k, v| v.blank? || k.to_sym == :show_caption || k.to_sym == :disable_link }
-        ),
-        {
-          :alt => (content.essence.alt_tag.blank? ? nil : content.essence.alt_tag),
-          :title => (content.essence.title.blank? ? nil : content.essence.title),
-          :class => (caption || content.essence.css_class.blank? ? nil : content.essence.css_class)
-        }.merge(caption ? {} : html_options)
-      )
-      output = caption ? img_tag + caption : img_tag
-      if content.essence.link.present? && !options[:disable_link]
-        output = link_to(url_for(content.essence.link), {
-          :title => content.essence.link_title.blank? ? nil : content.essence.link_title,
-          :target => (content.essence.link_target == "blank" ? "_blank" : nil),
-          'data-link-target' => content.essence.link_target.blank? ? nil : content.essence.link_target
-        }) do
-          output
-        end
-      end
-      if caption
-        content_tag(:figure, output, {class: content.essence.css_class.blank? ? nil : content.essence.css_class}.merge(html_options))
-      else
-        output
-      end
-    end
-
   end
 end

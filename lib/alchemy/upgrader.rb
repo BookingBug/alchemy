@@ -2,27 +2,31 @@ require 'alchemy/seeder'
 
 module Alchemy
   class Upgrader < Alchemy::Seeder
-
     Dir["#{File.dirname(__FILE__)}/upgrader/*.rb"].each { |f| require f }
 
-    extend Alchemy::Upgrader::TwoPointNine
-    extend Alchemy::Upgrader::TwoPointSix
-    extend Alchemy::Upgrader::TwoPointFive
-    extend Alchemy::Upgrader::TwoPointFour
-    extend Alchemy::Upgrader::TwoPointThree
-    extend Alchemy::Upgrader::TwoPointTwo
-    extend Alchemy::Upgrader::TwoPointOne
-    extend Alchemy::Upgrader::TwoPointZero
+    extend Alchemy::Upgrader::ThreePointFour
+    extend Alchemy::Upgrader::ThreePointThree
+    extend Alchemy::Upgrader::ThreePointTwo
+    extend Alchemy::Upgrader::ThreePointOne
+    extend Alchemy::Upgrader::ThreePointZero
 
     class << self
-
       # Runs ugrades
       #
       def run!
         upgrade_tasks.each do |task|
-          self.send(task)
+          send(task)
         end
-        display_todos
+        puts "\n"
+        log "Upgrade done!"
+        if todos.any?
+          display_todos
+          log "\nThere are some follow ups to do", :message
+          log '-------------------------------', :message
+          log "\nPlease follow the TODOs above.", :message
+        else
+          log "\nThat's it.", :message
+        end
       end
 
       # Tasks that should run.
@@ -45,7 +49,7 @@ module Alchemy
         private_methods - Object.private_methods - superclass.private_methods
       end
 
-    private
+      private
 
       # Setup task
       def setup
@@ -58,16 +62,18 @@ module Alchemy
         desc "Copy configuration file."
         config_file = Rails.root.join('config/alchemy/config.yml')
         default_config = File.join(File.dirname(__FILE__), '../../config/alchemy/config.yml')
-        if FileUtils.identical? default_config, config_file
+        if !File.exist? config_file
+          log "No configuration file found. Creating it."
+          FileUtils.cp default_config, Rails.root.join('config/alchemy/config.yml')
+        elsif FileUtils.identical? default_config, config_file
           log "Configuration file already present.", :skip
         else
           log "Custom configuration file found."
           FileUtils.cp default_config, Rails.root.join('config/alchemy/config.yml.defaults')
           log "Copied new default configuration file."
-          todo "Check the default configuration file (./config/alchemy/config.yml.defaults) for new configuration options and insert them into your config file."
+          todo "Check the default configuration file (./config/alchemy/config.yml.defaults) for new configuration options and insert them into your config file.", 'Configuration has changed'
         end
       end
-
     end
   end
 end

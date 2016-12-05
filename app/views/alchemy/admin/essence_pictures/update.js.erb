@@ -1,9 +1,9 @@
 (function($) {
   Alchemy.ImageCropper.destroy();
-  Alchemy.closeCurrentWindow();
+  Alchemy.closeCurrentDialog();
   Alchemy.setElementDirty('#element_<%= @content.element.id %>');
 <% if @content.ingredient %>
-  $('.thumbnail_background img', '#<%= content_dom_id(@content) %>').replaceWith('<%= essence_picture_thumbnail(@content, @options) %>');
-  Alchemy.ImageLoader('#<%= content_dom_id(@content) %> .thumbnail_background');
+  $('.thumbnail_background img', '#<%= @content.dom_id %>').replaceWith('<%= essence_picture_thumbnail(@content, @options) %>');
+  Alchemy.ImageLoader('#<%= @content.dom_id %> .thumbnail_background');
 <% end %>
 })(jQuery);

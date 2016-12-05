@@ -3,6 +3,8 @@
 <head>
   <%= render_meta_data %>
   <%= stylesheet_link_tag 'application' %>
+  <%= javascript_include_tag "application" %>
+  <%= csrf_meta_tags %>
 </head>
 <body>
   <%= yield %>
@@ -10,6 +12,6 @@
     <%= render_navigation(:all_sub_menues => true) %>
   </div>
   <%= alchemy_preview_mode_code %>
-  <%= alchemy_menu_bar %>
+  <%= render "alchemy/menubar" %>
 </body>
 </html>

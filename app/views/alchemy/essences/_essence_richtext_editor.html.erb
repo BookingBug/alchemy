@@ -1,6 +1,6 @@
 <% cache(content) do -%>
-<div class="content_editor essence_richtext" id="<%= content_dom_id(content) %>">
-  <%= label_and_remove_link(content) %>
+<div class="content_editor essence_richtext" id="<%= content.dom_id %>">
+  <%= content_label(content) %>
   <div class="tinymce_container">
     <%= text_area_tag(
       content.form_field_name,

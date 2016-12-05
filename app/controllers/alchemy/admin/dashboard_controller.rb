@@ -4,10 +4,11 @@ require 'alchemy/version'
 module Alchemy
   module Admin
     class DashboardController < Alchemy::Admin::BaseController
+      authorize_resource class: :alchemy_admin_dashboard
 
       def index
-        @last_edited_pages = Page.from_current_site.all_last_edited_from(current_alchemy_user)
-        @locked_pages = Page.from_current_site.all_locked
+        @last_edited_pages = Page.all_last_edited_from(current_alchemy_user)
+        @all_locked_pages = Page.locked
         if Alchemy.user_class.respond_to?(:logged_in)
           @online_users = Alchemy.user_class.logged_in.to_a - [current_alchemy_user]
         end
@@ -20,18 +21,17 @@ module Alchemy
 
       def info
         @alchemy_version = Alchemy.version
-        render layout: !request.xhr?
       end
 
       def update_check
         @alchemy_version = Alchemy.version
         if @alchemy_version < latest_alchemy_version
-          render :text => 'true'
+          render text: 'true'
         else
-          render :text => 'false'
+          render text: 'false'
         end
       rescue UpdateServiceUnavailable => e
-        render :text => e, :status => 503
+        render text: e, status: 503
       end
 
       private
@@ -66,14 +66,14 @@ module Alchemy
         end
       end
 
-      # Query the RubyGems API for alchemy versions.
+      # Query the RubyGems API for Alchemy versions.
       def query_rubygems
         make_api_request('https://rubygems.org/api/v1/versions/alchemy_cms.json')
       end
 
-      # Query the GitHub API for alchemy tags.
+      # Query the GitHub API for Alchemy tags.
       def query_github
-        make_api_request('https://api.github.com/repos/magiclabs/alchemy_cms/tags')
+        make_api_request('https://api.github.com/repos/AlchemyCMS/alchemy_cms/tags')
       end
 
       # Make a HTTP API request for given request url.
@@ -82,10 +82,8 @@ module Alchemy
         request = Net::HTTP::Get.new(url.path)
         connection = Net::HTTP.new(url.host, url.port)
         connection.use_ssl = true
-        connection.verify_mode = OpenSSL::SSL::VERIFY_NONE
         connection.request(request)
       end
-
     end
   end
 end

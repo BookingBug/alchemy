@@ -1,60 +1,60 @@
 require 'thor'
 
-class Alchemy::RoutesInjector < Thor
+class Alchemy::InstallTask < Thor
   include Thor::Actions
 
   no_tasks do
-    def inject
-      mountpoint = ask "\nWhere do you want to mount Alchemy CMS? (/)"
+    def inject_routes
+      mountpoint = ask "\nAt which path do you want to mount Alchemy CMS at? (DEFAULT: At root path '/')"
       mountpoint = "/" if mountpoint.empty?
       sentinel = /\.routes\.draw do(?:\s*\|map\|)?\s*$/
-      inject_into_file "./config/routes.rb", "\n  mount Alchemy::Engine => '#{mountpoint}'\n", { :after => sentinel, :verbose => true }
-      mountpoint
+      inject_into_file "./config/routes.rb", "\n  mount Alchemy::Engine => '#{mountpoint}'\n", { after: sentinel, verbose: true }
+    end
+
+    def set_primary_language
+      code = ask "\nWhat's the language code of your site's primary language? (DEFAULT: en)"
+      code = "en" if code.empty?
+      name = ask "What's the name of your site's primary language? (DEFAULT: English)"
+      name = "English" if name.empty?
+      gsub_file "./config/alchemy/config.yml", /default_language:\n\s\scode:\sen\n\s\sname:\sEnglish/m do
+        "default_language:\n  code: #{code}\n  name: #{name}"
+      end
+    end
+
+    def inject_seeder
+      append_file "./db/seeds.rb", "Alchemy::Seeder.seed!\n"
     end
   end
-
 end
 
 namespace :alchemy do
-
-  desc "Creates, migrates and seeds the database to run Alchemy."
-  task :prepare => ["db:create", "alchemy:install:migrations", "db:migrate", "alchemy:db:seed"]
-
   desc "Installs Alchemy CMS into your app."
-  task :install => ["alchemy:prepare", "alchemy:mount"] do
-    system("rails g alchemy:scaffold")
-    puts <<-EOF
+  task :install do
+    install_helper = Alchemy::InstallTask.new
 
-\\o/ Successfully installed Alchemy CMS \\o/
-
-Now cd into your app folder and
-
-1. Start your Rails server:
-
-  rails server
-
-2. Open your browser and enter the following URL:
-
-  http://localhost:3000/#{@mountpoint.gsub(/^\//, '')}
-
-3. Follow the instructions to complete the installation!
-
-== First time Alchemy user?
-
-Then we recommend to install the Alchemy demo kit.
-
-Just add `gem "alchemy-demo_kit"` to your apps Gemfile and run `bundle install`.
-
-Thank you for using Alchemy CMS!
-
-http://alchemy-cms.com/
-
-EOF
+    unless ENV['from_binary']
+      puts "\nAlchemy Installer"
+      puts "-----------------"
+    end
+    Rake::Task["alchemy:mount"].invoke
+    system("rails g alchemy:install#{ENV['from_binary'] ? ' --force' : ''}") || exit!(1)
+    install_helper.set_primary_language
+    Rake::Task["db:create"].invoke
+    # We can't invoke this rake task, because Rails will use wrong engine names otherwise
+    `bundle exec rake railties:install:migrations`
+    Rake::Task["db:migrate"].invoke
+    install_helper.inject_seeder
+    Rake::Task["db:seed"].invoke
+    unless ENV['from_binary']
+      puts "\nAlchemy successfully installed."
+      puts "\nNow start the server with:"
+      puts "\n$ bin/rails server"
+      puts "\nand point your browser to http://localhost:3000/admin and follow the onscreen instructions to finalize the installation."
+    end
   end
 
   desc "Mounts Alchemy into your routes."
   task :mount do
-    @mountpoint = Alchemy::RoutesInjector.new.inject
+    Alchemy::InstallTask.new.inject_routes
   end
-
 end

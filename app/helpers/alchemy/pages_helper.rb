@@ -1,6 +1,5 @@
 module Alchemy
   module PagesHelper
-
     include Alchemy::BaseHelper
     include Alchemy::ElementsHelper
 
@@ -10,19 +9,26 @@ module Alchemy
 
     # Renders links to language root pages of all published languages.
     #
-    # @option options linkname [String] ('name') Renders name/code of language, or I18n translation for code.
-    # @option options show_title [Boolean] (true) Renders title attributes for the links.
-    # @option options spacer [String] ('') Renders the passed spacer string. You can also overwrite the spacer partial: "alchemy/language_links/_spacer".
-    # @option options reverse [Boolean] (false) Reverses the ordering of the links.
+    # @option options linkname [String] ('name')
+    #   Renders name/code of language, or I18n translation for code.
     #
-    def language_links(options={})
+    # @option options show_title [Boolean] (true)
+    #   Renders title attributes for the links.
+    #
+    # @option options spacer [String] ('')
+    #   Renders the passed spacer string. You can also overwrite the spacer partial: "alchemy/language_links/_spacer".
+    #
+    # @option options reverse [Boolean] (false)
+    #   Reverses the ordering of the links.
+    #
+    def language_links(options = {})
       options = {
         linkname: 'name',
         show_title: true,
         spacer: '',
         reverse: false
       }.merge(options)
-      languages = Language.published.with_language_root.order("name #{options[:reverse] ? 'DESC' : 'ASC'}")
+      languages = Language.published.with_root_page.order("name #{options[:reverse] ? 'DESC' : 'ASC'}")
       return nil if languages.count < 2
       render(
         partial: "alchemy/language_links/language",
@@ -32,22 +38,17 @@ module Alchemy
       )
     end
 
-    def language_switches(options={})
-      ActiveSupport::Deprecation.warn("Used deprecated language_switches helper. It will be removed in Alchemy v3.0. You can use language_links instead.")
-      language_links(options)
-    end
-
-    def language_switcher(options={})
-      ActiveSupport::Deprecation.warn("Used deprecated language_switcher helper. It will be removed in Alchemy v3.0. You can use language_links instead.")
-      language_links(options)
-    end
-
-    # Renders the layout from @page.page_layout. File resists in /app/views/page_layouts/_LAYOUT-NAME.html.erb
-    def render_page_layout(options={})
-      render :partial => "alchemy/page_layouts/#{@page.page_layout.downcase}"
+    # Renders the layout for current page.
+    #
+    # Page layout files belongs in +/app/views/alchemy/page_layouts/+
+    #
+    # Falls back to +/app/views/alchemy/page_layouts/standard+ if the page_layout partial is not found.
+    #
+    def render_page_layout
+      render @page, page: @page
     rescue ActionView::MissingTemplate
       warning("PageLayout: '#{@page.page_layout}' not found. Rendering standard page_layout.")
-      render :partial => "alchemy/page_layouts/standard"
+      render 'alchemy/page_layouts/standard', page: @page
     end
 
     # Renders a partial for current site
@@ -63,9 +64,9 @@ module Alchemy
     # renders +app/views/alchemy/site_layouts/_default_site.html.erb+ for the site named "Default Site".
     #
     def render_site_layout
-      render current_site
+      render current_alchemy_site
     rescue ActionView::MissingTemplate
-      warning("Site layout for #{current_site.try(:name)} not found. Please run `rails g alchemy:site_layouts`")
+      warning("Site layout for #{current_alchemy_site.try(:name)} not found. Please run `rails g alchemy:site_layouts`")
       return ""
     end
 
@@ -74,7 +75,7 @@ module Alchemy
     # It produces a html <ul><li></li></ul> structure with all necessary classes so you can produce every navigation the web uses today.
     # I.E. dropdown-navigations, simple mainnavigations or even complex nested ones.
     #
-    # === En detail:
+    # === HTML output:
     #
     #   <ul class="navigation level_1">
     #     <li class="first home"><a href="/home" class="active" title="Homepage" lang="en" data-page-id="1">Homepage</a></li>
@@ -85,23 +86,8 @@ module Alchemy
     # As you can see: Everything you need.
     #
     # Not pleased with the way Alchemy produces the navigation structure?
+    #
     # Then feel free to overwrite the partials (_renderer.html.erb and _link.html.erb) found in +views/navigation/+ or pass different partials via the options +:navigation_partial+ and +:navigation_link_partial+.
-    #
-    # === The options are:
-    #
-    #   :submenu => false                                     # Do you want a nested <ul> <li> structure for the deeper levels of your navigation, or not? Used to display the subnavigation within the mainnaviagtion. E.g. for dropdown menues.
-    #   :all_sub_menues => false                              # Renders the whole page tree.
-    #   :from_page => @root_page                              # Do you want to render a navigation from a different page then the current page? Then pass an Page instance or a Alchemy::PageLayout name as string.
-    #   :spacer => nil                                        # A spacer for the entries can be passed. Simple string, or even a complex html structure. E.g: "<span class='spacer'>|</spacer>".
-    #   :navigation_partial => "navigation/renderer"          # Pass a different partial to be taken for the navigation rendering.
-    #   :navigation_link_partial => "navigation/link"         # Alchemy places an <a> html link in <li> tags. The tag automatically has an active css class if necessary. So styling is everything. But maybe you don't want this. So feel free to make you own partial and pass the filename here.
-    #   :show_nonactive => false                              # Commonly Alchemy only displays the submenu of the active page (if :submenu => true). If you want to display all child pages then pass true (together with :submenu => true of course). E.g. for the popular css-driven dropdownmenues these days.
-    #   :show_title => true                                   # For our beloved SEOs :). Appends a title attribute to all links and places the page.title content into it.
-    #   :restricted_only => false                             # Render only restricted pages. I.E for members only navigations.
-    #   :show_title => true                                   # Show a title on navigation links. Title attribute from page.
-    #   :reverse => false                                     # Reverse the navigation
-    #   :reverse_children => false                            # Reverse the nested children
-    #   :deepness => nil                                      # Show only pages up to this depth.
     #
     # === Passing HTML classes and ids to the renderer
     #
@@ -109,25 +95,74 @@ module Alchemy
     #
     # ==== Example:
     #
-    #   <%= render_navigation({from_page => 'subnavi'}, {:class => 'navigation', :id => 'subnavigation'}) %>
+    #   <%= render_navigation({from_page: 'subnavi'}, {class: 'navigation', id: 'subnavigation'}) %>
+    #
+    #
+    # @option options submenu [Boolean] (false)
+    #   Do you want a nested <ul> <li> structure for the deeper levels of your navigation, or not?
+    #   Used to display the subnavigation within the mainnaviagtion. I.e. for dropdown menues.
+    #
+    # @option options all_sub_menues [Boolean] (false)
+    #   Renders the whole page tree.
+    #
+    # @option options from_page [Alchemy::Page] (@root_page)
+    #   Do you want to render a navigation from a different page then the current page?
+    #   Then pass an Page instance or a Alchemy::PageLayout name as string.
+    #
+    # @option options spacer [String] (nil)
+    #   A spacer for the entries can be passed.
+    #   Simple string, or even a complex html structure.
+    #   I.e: "<span class='spacer'>|</spacer>".
+    #
+    # @option options navigation_partial [String] ("navigation/renderer")
+    #   Pass a different partial to be taken for the navigation rendering.
+    #   Alternatively you could override the +app/views/alchemy/navigation/renderer+ partial in your app.
+    #
+    # @option options navigation_link_partial [String] ("navigation/link")
+    #   Alchemy places an <a> html link in <li> tags.
+    #   The tag automatically has an active css class if necessary.
+    #   So styling is everything. But maybe you don't want this.
+    #   So feel free to make you own partial and pass the filename here.
+    #   Alternatively you could override the +app/views/alchemy/navigation/link+ partial in your app.
+    #
+    # @option options show_nonactive [Boolean] (false)
+    #   Commonly Alchemy only displays the submenu of the active page (if submenu: true).
+    #   If you want to display all child pages then pass true (together with submenu: true of course).
+    #   I.e. for css-driven drop down menues.
+    #
+    # @option options show_title [Boolean] (true)
+    #   For our beloved SEOs :)
+    #   Appends a title attribute to all links and places the +page.title+ content into it.
+    #
+    # @option options restricted_only [Boolean] (false)
+    #   Render only restricted pages. I.E for members only navigations.
+    #
+    # @option options reverse [Boolean] (false)
+    #   Reverse the output of the pages
+    #
+    # @option options reverse_children [Boolean] (false)
+    #   Like reverse option, but only reverse the children of the first level
+    #
+    # @option options deepness [Fixnum] (nil)
+    #   Show only pages up to this depth.
     #
     def render_navigation(options = {}, html_options = {})
       options = {
-        :submenu => false,
-        :all_sub_menues => false,
-        :from_page => @root_page || Page.language_root_for(session[:language_id]),
-        :spacer => nil,
-        :navigation_partial => "alchemy/navigation/renderer",
-        :navigation_link_partial => "alchemy/navigation/link",
-        :show_nonactive => false,
-        :restricted_only => false,
-        :show_title => true,
-        :reverse => false,
-        :reverse_children => false
+        submenu: false,
+        all_sub_menues: false,
+        from_page: @root_page || Language.current_root_page,
+        spacer: nil,
+        navigation_partial: 'alchemy/navigation/renderer',
+        navigation_link_partial: 'alchemy/navigation/link',
+        show_nonactive: false,
+        restricted_only: false,
+        show_title: true,
+        reverse: false,
+        reverse_children: false
       }.merge(options)
       page = page_or_find(options[:from_page])
       return nil if page.blank?
-      pages = page.children.with_permissions_to(:see, :context => :alchemy_pages)
+      pages = page.children.accessible_by(current_ability, :see)
       pages = pages.restricted if options.delete(:restricted_only)
       if depth = options[:deepness]
         pages = pages.where("#{Page.table_name}.depth <= #{depth}")
@@ -135,12 +170,10 @@ module Alchemy
       if options[:reverse]
         pages.reverse!
       end
-      render(
-        options[:navigation_partial],
-        :options => options,
-        :pages => pages,
-        :html_options => html_options
-      )
+      render options[:navigation_partial],
+        options: options,
+        pages: pages,
+        html_options: html_options
     end
 
     # Renders navigation the children and all siblings of the given page (standard is the current page).
@@ -151,19 +184,19 @@ module Alchemy
     #
     # === Options:
     #
-    #   :from_page => @page                              # The page to render the navigation from
-    #   :submenu => true                                 # Shows the nested children
-    #   :level => 2                                      # Normally there is no need to change the level parameter, just in a few special cases
+    #   from_page: @page                              # The page to render the navigation from
+    #   submenu: true                                 # Shows the nested children
+    #   level: 2                                      # Normally there is no need to change the level parameter, just in a few special cases
     #
     def render_subnavigation(options = {}, html_options = {})
       default_options = {
-        :from_page => @page,
-        :submenu => true,
-        :level => 2
+        from_page: @page,
+        submenu: true,
+        level: 2
       }
       options = default_options.merge(options)
       if !options[:from_page].nil?
-        while options[:from_page].level > options[:level] do
+        while options[:from_page].level > options[:level]
           options[:from_page] = options[:from_page].parent
         end
         render_navigation(options, html_options)
@@ -174,8 +207,8 @@ module Alchemy
 
     # Returns true if page is in the active branch
     def page_active?(page)
-      @breadcrumb ||= breadcrumb(@page)
-      @breadcrumb.include?(page)
+      @_page_ancestors ||= Page.ancestors_for(@page)
+      @_page_ancestors.include?(page)
     end
 
     # Returns +'active'+ if the given external page is in the current url path or +nil+.
@@ -188,23 +221,33 @@ module Alchemy
     #
     # === Options:
     #
-    #   :seperator => %(<span class="seperator">></span>)      # Maybe you don't want this seperator. Pass another one.
-    #   :page => @page                                         # Pass a different Page instead of the default (@page).
-    #   :without => nil                                        # Pass Page object or array of Pages that must not be displayed.
-    #   :restricted_only => false                              # Pass boolean for displaying restricted pages only.
-    #   :reverse => false                                      # Pass boolean for displaying breadcrumb in reversed reversed.
+    #   separator: %(<span class="separator">></span>)      # Maybe you don't want this separator. Pass another one.
+    #   page: @page                                         # Pass a different Page instead of the default (@page).
+    #   without: nil                                        # Pass Page object or array of Pages that must not be displayed.
+    #   restricted_only: false                              # Pass boolean for displaying restricted pages only.
+    #   reverse: false                                      # Pass boolean for displaying breadcrumb in reversed reversed.
     #
-    def render_breadcrumb(options={})
+    def render_breadcrumb(options = {})
       options = {
-        :seperator => %(<span class="seperator">&gt;</span>),
-        :page => @page,
-        :restricted_only => false,
-        :reverse => false,
-        :link_active_page => false
+        separator: ">",
+        page: @page,
+        restricted_only: false,
+        reverse: false,
+        link_active_page: false
       }.merge(options)
-      pages = breadcrumb(options[:page]).with_permissions_to(:see, :context => :alchemy_pages)
-      pages = pages.restricted if options.delete(:restricted_only)
-      pages.to_a.reverse! if options[:reverse]
+
+      pages = Page.
+        ancestors_for(options[:page]).
+        accessible_by(current_ability, :see)
+
+      if options.delete(:restricted_only)
+        pages = pages.restricted
+      end
+
+      if options.delete(:reverse)
+        pages.to_a.reverse!
+      end
+
       if options[:without].present?
         if options[:without].class == Array
           pages = pages.to_a - options[:without]
@@ -212,34 +255,35 @@ module Alchemy
           pages.to_a.delete(options[:without])
         end
       end
-      render(
-        partial: 'alchemy/breadcrumb/page',
-        collection: pages,
-        spacer_template: 'alchemy/breadcrumb/spacer',
-        locals: {pages: pages, options: options}
-      )
+
+      render 'alchemy/breadcrumb/wrapper', pages: pages, options: options
     end
 
     # Returns current page title
     #
     # === Options:
     #
-    #   :prefix => ""                 # Prefix
-    #   :seperator => ""              # Seperating prefix and title
+    #   prefix: ""                 # Prefix
+    #   separator: ""              # Separating prefix and title
     #
     # === Webdevelopers
     #
     # Please use the render_meta_data() helper instead. There all important meta information gets rendered in one helper.
     # So you dont have to worry about anything.
     #
-    def render_page_title(options={})
+    def render_page_title(options = {})
       return "" if @page.title.blank?
-      default_options = {
-        :prefix => "",
-        :seperator => ""
-      }
-      default_options.update(options)
-      [default_options[:prefix], response.status == 200 ? @page.title : response.status].join(default_options[:seperator])
+      options = {
+        prefix: "",
+        separator: ""
+      }.update(options)
+      title_parts = [options[:prefix]]
+      if response.status == 200
+        title_parts << @page.title
+      else
+        title_parts << response.status
+      end
+      title_parts.join(options[:separator]).html_safe
     end
 
     # Returns a complete html <title> tag for the <head> part of the html document.
@@ -249,31 +293,31 @@ module Alchemy
     # Please use the render_meta_data() helper. There all important meta information gets rendered in one helper.
     # So you dont have to worry about anything.
     #
-    def render_title_tag(options={})
+    def render_title_tag(options = {})
       default_options = {
-        :prefix => "",
-        :seperator => ""
+        prefix: "",
+        separator: ""
       }
       options = default_options.merge(options)
-      %(<title>#{render_page_title(options)}</title>).html_safe
+      content_tag(:title, render_page_title(options))
     end
 
-    # Renders a html <meta> tag for :name => "" and :content => ""
+    # Renders a html <meta> tag for name: "" and content: ""
     #
     # === Webdevelopers:
     #
     # Please use the render_meta_data() helper. There all important meta information gets rendered in one helper.
     # So you dont have to worry about anything.
     #
-    def render_meta_tag(options={})
+    def render_meta_tag(options = {})
       default_options = {
-        :name => "",
-        :default_language => "de",
-        :content => ""
+        name: "",
+        default_language: "de",
+        content: ""
       }
       options = default_options.merge(options)
       lang = (@page.language.blank? ? options[:default_language] : @page.language.code)
-      %(<meta name="#{options[:name]}" content="#{options[:content]}" lang="#{lang}">).html_safe
+      tag(:meta, name: options[:name], content: options[:content], lang: lang)
     end
 
     # This helper takes care of all important meta tags for your page.
@@ -286,49 +330,61 @@ module Alchemy
     # Description = Your page description
     # Keywords: cms, ruby, rubyonrails, rails, software, development, html, javascript, ajax
     #
-    # Then placing +render_meta_data(:title_prefix => "Company", :title_seperator => "-")+ into the <head> part of the +pages.html.erb+ layout produces:
+    # Then placing +render_meta_data(title_prefix: "Company", title_separator: "-")+ into the <head> part of the +pages.html.erb+ layout produces:
     #
-    #   <meta charset="UTF-8">
+    #   <meta charset="utf-8">
     #   <title>Company - #{@page.title}</title>
     #   <meta name="description" content="Your page description">
     #   <meta name="keywords" content="cms, ruby, rubyonrails, rails, software, development, html, javascript, ajax">
+    #   <meta name="created" content="Tue Dec 16 10:21:26 +0100 2008">
+    #   <meta name="robots" content="index, follow">
     #
-    def render_meta_data options={}
+    def render_meta_data(options = {})
       if @page.blank?
         warning("No Page found!")
         return nil
       end
       default_options = {
-        :title_prefix => "",
-        :title_seperator => "",
-        :default_lang => "de"
+        title_prefix: "",
+        title_separator: "",
+        default_lang: "de"
       }
       options = default_options.merge(options)
-      #render meta description of the root page from language if the current meta description is empty
+      # render meta description of the root page from language if the current meta description is empty
       if @page.meta_description.blank?
-        description = Page.published.with_language(session[:language_id]).find_by_language_root(true).try(:meta_description)
+        description = Language.current_root_page.try(:meta_description)
       else
         description = @page.meta_description
       end
-      #render meta keywords of the root page from language if the current meta keywords is empty
+      # render meta keywords of the root page from language if the current meta keywords is empty
       if @page.meta_keywords.blank?
-        keywords = Page.published.with_language(session[:language_id]).find_by_language_root(true).try(:meta_keywords)
+        keywords = Language.current_root_page.try(:meta_keywords)
       else
         keywords = @page.meta_keywords
       end
-      robot = "#{@page.robot_index? ? "" : "no"}index, #{@page.robot_follow? ? "" : "no"}follow"
+      robot = "#{@page.robot_index? ? '' : 'no'}index, #{@page.robot_follow? ? '' : 'no'}follow"
       meta_string = %(
-        <meta charset="UTF-8">
-        #{render_title_tag(:prefix => options[:title_prefix], :seperator => options[:title_seperator])}
-        #{render_meta_tag(:name => "description", :content => description)}
-        #{render_meta_tag(:name => "keywords", :content => keywords)}
+        #{tag(:meta, charset: 'utf-8')}
+        #{render_title_tag(prefix: options[:title_prefix], separator: options[:title_separator])}
+        #{render_meta_tag(name: 'created', content: @page.updated_at)}
+        #{render_meta_tag(name: 'robots', content: robot)}
       )
-      if @page.contains_feed?
+      if description.present?
         meta_string += %(
-          <link rel="alternate" type="application/rss+xml" title="RSS" href="#{show_alchemy_page_url(@page, :protocol => 'feed', :format => :rss)}">
+          #{render_meta_tag(name: 'description', content: description.html_safe)}
         )
       end
-      return meta_string.html_safe
+      if keywords.present?
+        meta_string += %(
+          #{render_meta_tag(name: 'keywords', content: keywords.html_safe)}
+        )
+      end
+      if @page.contains_feed?
+        meta_string += %(
+          #{auto_discovery_link_tag(:rss, show_alchemy_page_url(@page, format: :rss))}
+        )
+      end
+      meta_string.html_safe
     end
 
     # Renders the partial for the cell with the given name of the current page.
@@ -336,101 +392,33 @@ module Alchemy
     #
     # === Options are:
     #
-    #   :from_page => Alchemy::Page     # Alchemy::Page object from which the elements are rendered from.
-    #   :locals => Hash                 # Hash of variables that will be available in the partial. Example: {:user => var1, :product => var2}
+    #   from_page: Alchemy::Page     # Alchemy::Page object from which the elements are rendered from.
+    #   locals: Hash                 # Hash of variables that will be available in the partial. Example: {user: var1, product: var2}
     #
-    def render_cell(name, options={})
+    def render_cell(name, options = {})
       default_options = {
-        :from_page => @page,
-        :locals => {}
+        from_page: @page,
+        locals: {}
       }
       options = default_options.merge(options)
       cell = options[:from_page].cells.find_by_name(name)
       return "" if cell.blank?
-      render :partial => "alchemy/cells/#{name}", :locals => {:cell => cell}.merge(options[:locals])
+      render partial: "alchemy/cells/#{name}", locals: {cell: cell}.merge(options[:locals])
     end
 
     # Returns true or false if no elements are in the cell found by name.
     def cell_empty?(name)
       cell = @page.cells.find_by_name(name)
       return true if cell.blank?
-      cell.elements.blank?
+      cell.elements.not_trashed.empty?
     end
 
     # Include this in your layout file to have element selection magic in the page edit preview window.
     def alchemy_preview_mode_code
-      javascript_include_tag("alchemy/preview") if @preview_mode
-    end
-
-    # Renders a search form
-    #
-    # It queries the controller and then redirects to the search result page.
-    #
-    # === Example search results page layout
-    #
-    # Only performs the search if ferret is enabled in your +config/alchemy/config.yml+ and
-    # a page is present that is flagged with +searchresults+ true.
-    #
-    #   # config/alchemy/page_layouts.yml
-    #   - name: search
-    #     searchresults: true # Flag as search result page
-    #
-    # === Note
-    #
-    # The search result page will not be cached.
-    #
-    # @option options html5 [Boolean] (true) Should the search form be of type search or not?
-    # @option options class [String] (fulltext_search) The default css class of the form
-    # @option options id [String] (search) The default css id of the form
-    #
-    def render_search_form(options={})
-      default_options = {
-        :html5 => false,
-        :class => 'fulltext_search',
-        :id => 'search'
-      }
-      render :partial => 'alchemy/search/form', :locals => {:options => default_options.merge(options), :search_result_page => find_search_result_page}
-    end
-
-    # Renders the search results partial within +app/views/alchemy/search/_results.html+
-    #
-    # @option options show_result_count [Boolean] (true) Should the count of results be displayed or not?
-    # @option options show_heading [Boolean] (true) Should the heading be displayed or not?
-    #
-    def render_search_results(options={})
-      default_options = {
-        :show_result_count => true,
-        :show_heading => true
-      }
-      render 'alchemy/search/results', :options => default_options.merge(options)
-    end
-
-    # Renders a menubar for logged in users that are visiting a page.
-    def alchemy_menu_bar
-      ActiveSupport::Deprecation.warn('Used deprecated alchemy_menu_bar helper. It will be removed in Alchemy v3.0. You can use `render "/alchemy/menubar"` instead.')
-      return if @preview_mode
-      if permitted_to?(:edit, :alchemy_admin_pages)
-        menu_bar_string = ""
-        menu_bar_string += stylesheet_link_tag("alchemy/menubar")
-        menu_bar_string += javascript_include_tag('alchemy/menubar')
-        menu_bar_string += <<-STR
-          <script type="text/javascript">
-            try {
-              Alchemy.loadAlchemyMenuBar({
-                page_id: #{@page.id},
-                route: '#{Alchemy::MountPoint.get}',
-                locale: '#{current_alchemy_user.language || ::I18n.default_locale}'
-              });
-            } catch(e) {
-              if(console){console.log(e)}
-            }
-          </script>
-        STR
-        menu_bar_string.html_safe
-      else
-        nil
+      if @preview_mode
+        javascript_tag("Alchemy = { locale: '#{session[:alchemy_locale]}' };") +
+          javascript_include_tag("alchemy/preview")
       end
     end
-
   end
 end

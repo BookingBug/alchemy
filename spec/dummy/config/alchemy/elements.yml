@@ -17,23 +17,19 @@
   - name: headline
     type: EssenceText
     settings:
-      deletable: true
+      linkable: true
   - name: image
     type: EssencePicture
   - name: text
     type: EssenceRichtext
-    settings:
-      deletable: true
-  available_contents:
-  - name: text
-    type: EssenceRichtext
-  - name: headline
-    type: EssenceText
 
 - name: text
   contents:
   - name: text
     type: EssenceRichtext
+
+- name: search
+  contents: []
 
 - name: news
   contents:
@@ -48,11 +44,6 @@
 
 - name: download
   contents:
-  - name: file
-    type: EssenceFile
-    settings:
-      deletable: true
-  available_contents:
   - name: file
     type: EssenceFile
 
@@ -74,7 +65,7 @@
       - presence
   - name: subject
     type: EssenceText
-    take_me_for_preview: true
+    as_element_title: true
     validate:
       - presence
   - name: success_page
@@ -82,5 +73,40 @@
     validate:
       - presence
 
-- name: searchresult
-  unique: true
+- name: all_you_can_eat
+  contents:
+  - name: essence_boolean
+    type: EssenceBoolean
+  - name: essence_date
+    type: EssenceDate
+  - name: essence_file
+    type: EssenceFile
+  - name: essence_html
+    type: EssenceHtml
+  - name: essence_link
+    type: EssenceLink
+  - name: essence_picture
+    type: EssencePicture
+  - name: essence_richtext
+    type: EssenceRichtext
+  - name: essence_select
+    type: EssenceSelect
+  - name: essence_text
+    type: EssenceText
+
+- name: <%= 'erb_' + 'element' %>
+  contents:
+  - name: text
+    type: EssenceRichtext
+
+- name: slide
+  contents:
+    - name: picture
+      type: EssencePicture
+    - name: caption
+      type: EssenceText
+      as_element_title: true
+
+- name: slider
+  nestable_elements:
+    - slide

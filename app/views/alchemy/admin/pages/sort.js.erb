@@ -1,7 +1,4 @@
-(function($) {
-  $('#sitemap').replaceWith('<%= escape_javascript(render(:partial => "sitemap")) -%>');
-  $('#sort_panel').show();
-  $('#sitemap_heading').css({'padding-top': 102});
-  Alchemy.PageSorter.init();
-  Alchemy.pleaseWaitOverlay(false);
-})(jQuery);
+$('#sitemap').replaceWith('<%= j render('sitemap', page_partial: 'page', full: true) %>');
+$('#sort_panel').show();
+$('#sitemap_heading').css({'padding-top': 102});
+Alchemy.pleaseWaitOverlay(false);

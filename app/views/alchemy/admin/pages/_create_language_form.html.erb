@@ -1,53 +1,51 @@
 <% if root = Alchemy::Page.rootpage %>
-<div id="create_language_tree_form" style="display: none">
-  <div class="info">
-    <%= render_icon('info') %>
-    <%= _t(:language_does_not_exist) %>
-  </div>
+<div id="create_language_tree_form">
+  <%= render_message do %>
+    <h2><%= Alchemy.t(:language_does_not_exist) %></h2>
+  <% end %>
 <%- if @language -%>
 
   <%- if @languages_with_page_tree.size >= 1 -%>
     <%= form_tag(alchemy.copy_language_tree_admin_pages_path) do %>
-      <h2><%= _t(:copy_language_tree_heading) %></h2>
-      <p><%= _t(:want_to_make_copy_of_existing_language) %></p>
-      <table>
-        <tr>
-          <td class="label"><%= label_tag('languages[old_lang_id]', _t('Language tree')) %></td>
-          <td class="select">
-            <%= select_tag("languages[old_lang_id]", options_for_select(@languages_with_page_tree.map{ |l| [l.name, l.id] }), :class => "alchemy_selectbox medium_long") %>
-            <%= hidden_field_tag("languages[new_lang_id]", @language.id) %>
-          </td>
-        </tr>
-        <tr>
-          <td class="submit" colspan="2">
-            <%= hidden_field_tag("layoutpage", params[:action] == "layoutpages") if params[:action] == "layoutpages" %>
-            <%= submit_tag _t(:copy), :class => 'button' %>
-          </td>
-        </tr>
-      </table>
+      <h3><%= Alchemy.t(:copy_language_tree_heading) %></h3>
+      <p><%= Alchemy.t(:want_to_make_copy_of_existing_language) %></p>
+      <div class="input select">
+        <%= label_tag('languages[old_lang_id]', Alchemy.t('Language tree'), class: 'control-label') %>
+        <%= select_tag("languages[old_lang_id]", options_for_select(@languages_with_page_tree.map{ |l| [l.name, l.id] }), class: "alchemy_selectbox") %>
+        <%= hidden_field_tag("languages[new_lang_id]", @language.id) %>
+      </div>
+      <div class="submit">
+        <%= button_tag Alchemy.t(:copy) %>
+      </div>
     <% end %>
   <%- end -%>
 
   <%- if params[:action] == "index" -%>
-
-  <%= form_for([:admin, Alchemy::Page.new], :remote => true) do |form| %>
-    <h2><%= _t(:create_language_tree_heading) %></h2>
-    <p><%= _t(:want_to_create_new_language) %></p>
-    <%= form.hidden_field :name, :value => @language.frontpage_name %>
-    <%= form.hidden_field :language_id, :value => @language.id %>
-    <%= form.hidden_field :language_code, :value => @language.code %>
-    <%= form.hidden_field :page_layout, :value => @language.page_layout %>
-    <%= form.hidden_field :language_root, :value => true %>
-    <%= form.hidden_field :parent_id, :value => root.id %>
-    <%= hidden_field_tag :redirect_to, admin_pages_path %>
-    <%= form.button _t("create_tree_as_new_language", :language => @language.name), :class => 'button' %>
-  <% end %>
-
+    <%= alchemy_form_for([:admin, Alchemy::Page.new], id: 'create_language_tree') do |form| %>
+      <% if @languages_with_page_tree.size >= 1 %>
+        <h3><%= Alchemy.t(:create_language_tree_heading) %></h3>
+        <p><%= Alchemy.t(:want_to_create_new_language) %></p>
+      <% end %>
+      <%= form.input :name, input_html: {value: @language.frontpage_name} %>
+      <%= form.input :page_layout,
+        collection: @page_layouts,
+        selected: @language.page_layout,
+        label: Alchemy.t(:page_type),
+        include_blank: false,
+        required: true,
+        input_html: {class: 'alchemy_selectbox'} %>
+      <%= form.hidden_field :language_id, value: @language.id %>
+      <%= form.hidden_field :language_code, value: @language.code %>
+      <%= form.hidden_field :language_root, value: true %>
+      <%= form.hidden_field :parent_id, value: root.id %>
+      <%= form.hidden_field :public, value: Alchemy::Language.all.size == 1 %>
+      <%= form.submit Alchemy.t("create_tree_as_new_language", language: @language.name), autofocus: true %>
+    <% end %>
   <%- end -%>
 
 <%- else -%>
 
-  <p><%= _t("Actually this language does not exist. Please create this language first.") %></p>
+  <p><%= Alchemy.t("Actually this language does not exist. Please create this language first.") %></p>
 
 <%- end -%>
 
@@ -55,6 +53,6 @@
 <% else %>
 <%= render_message :error do %>
   <h2>Root page not found.</h2>
-  <p>Please run <code>rake alchemy:db:seed</code> task.</p>
+  <p>Please run <code>bin/rake db:seed</code> task.</p>
 <% end %>
 <% end %>

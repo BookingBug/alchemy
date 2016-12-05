@@ -1,50 +1,80 @@
 module Alchemy
   class PagesController < Alchemy::BaseController
-    include Ferret::Search
-    # We need to include this helper because we need the breadcrumb method.
-    # And we cannot define the breadcrump method as helper_method, because rspec does not see helper_methods.
-    # Not the best solution, but's working.
-    # Anyone with a better idea please provide a patch.
-    include Alchemy::BaseHelper
+    include OnPageLayout::CallbacksRunner
 
-    rescue_from ActionController::RoutingError, :with => :render_404
+    # Redirecting concerns. Order is important here!
+    include SiteRedirects
+    include LocaleRedirects
 
-    before_filter :enforce_primary_host_for_site
-    before_filter :render_page_or_redirect, :only => [:show]
-    before_filter :perform_search, :only => :show, :if => proc { configuration(:ferret) }
+    before_action :set_current_language
+    before_action :load_index_page, only: [:index]
+    before_action :load_page, only: [:show]
 
-    filter_access_to :show, :attribute_check => true, :model => Alchemy::Page, :load_method => :load_page
+    # Legacy page redirects need to run after the page was loaded and before we render 404.
+    include LegacyPageRedirects
 
-    caches_action(:show,
-      :cache_path => proc { @page.cache_key(request) },
-      :if => proc {
-        if @page && Alchemy::Config.get(:cache_pages)
-          pagelayout = PageLayout.get(@page.page_layout)
-          if (pagelayout['cache'].nil? || pagelayout['cache']) && pagelayout['searchresults'] != true
-            true
-          end
-        else
-          false
-        end
-      }, :layout => false)
+    # From here on, we need a +@page+ to work with!
+    before_action :page_not_found!, if: -> { @page.blank? }, only: [:index, :show]
 
-    layout :layout_for_page
+    # Page redirects need to run after the page was loaded and we're sure to have a +@page+ set.
+    include PageRedirects
 
-    # Showing page from params[:urlname]
-    # @page is fetched via before filter
-    # @root_page is fetched via before filter
-    # @language fetched via before_filter in alchemy_controller
-    # querying for search results if any query is present via before_filter
+    # We only need to set the +@root_page+ if we are sure that no more redirects happen.
+    before_action :set_root_page, only: [:index, :show]
+
+    # Page layout callbacks need to run after all other callbacks
+    before_action :run_on_page_layout_callbacks,
+      if: :run_on_page_layout_callbacks?,
+      only: [:index, :show]
+
+    before_action :set_expiration_headers, only: [:index, :show], if: -> { @page }
+
+    rescue_from ActionController::UnknownFormat, with: :page_not_found!
+
+    # == The index action gets invoked if one requests '/' or '/:locale'
+    #
+    # If the locale is the default locale, then it redirects to '/' without the locale.
+    #
+    # Loads the current language root page. The current language is either loaded via :locale
+    # parameter or, if that's missing, the default language is used.
+    #
+    # If this page is not published then it redirects to the first published descendant it finds.
+    #
+    # If no public page can be found it renders a 404 error.
+    #
+    def index
+      if Alchemy::Config.get(:redirect_index)
+        ActiveSupport::Deprecation.warn("The configuration option `redirect_index` is deprecated and will be removed with the release of Alchemy v4.0")
+        raise "Remove deprecated `redirect_index` configuration!" if Alchemy.version == "4.0.0.rc1"
+        redirect_permanently_to page_redirect_url
+      else
+        show
+      end
+    end
+
+    # == The show action gets invoked if one requests '/:urlname' or '/:locale/:urlname'
+    #
+    # If the locale is the default locale, then it redirects to '/' without the locale.
+    #
+    # Loads the page via it's urlname. If more than one language is published the
+    # current language is either loaded via :locale parameter or, if that's missing,
+    # the page language is used and a redirect to the page with prefixed locale happens.
+    #
+    # If the requested page is not published then it redirects to the first published
+    # descendant it finds. If no public page can be found it renders a 404 error.
+    #
     def show
-      respond_to do |format|
-        format.html { render }
-        format.rss {
-          if @page.contains_feed?
-            render :action => "show", :layout => false, :handlers => [:builder]
-          else
-            render :xml => {:error => 'Not found'}, :status => 404
-          end
-        }
+
+      # puts @page.inspect
+      if params[:urlname] == 'home'
+         redirect_to root_path, :status => 301 and return 
+      end
+
+      if redirect_url.present?
+        redirect_permanently_to redirect_url
+      else
+        authorize! :show, @page
+        render_page if render_fresh_page?
       end
     end
 
@@ -58,110 +88,128 @@ module Alchemy
 
     private
 
-    # Load the current page and store it in @page.
+    def set_current_language
+        if !Rails.env.development?
+          RequestStore.store[:alchemy_current_language] = Language.find_by(country_code: request.domain.include?('co.uk') ? 'uk' : 'us')
+        else 
+          RequestStore.store[:alchemy_current_language] = Language.find_by(country_code:'us')
+        end
+    end
+
+    # == Loads index page
+    #
+    # Loads the current public language root page.
+    #
+    # If the root page is not public it redirects to the first published child.
+    # This can be configured via +redirect_to_public_child+ [default: true]
+    #
+    # If no index page and no admin users are present we show the "Welcome to Alchemy" page.
+    #
+    def load_index_page
+      @page ||= Language.current_root_page
+      render template: 'alchemy/welcome', layout: false if signup_required?
+    end
+
+    # == Loads page by urlname
+    #
+    # If a locale is specified in the request parameters,
+    # scope pages to it to make sure we can raise a 404 if the urlname
+    # is not available in that language.
+    #
+    # @return Alchemy::Page
+    # @return NilClass
     #
     def load_page
-      @page ||= if params[:urlname].present?
-        # Load by urlname. If a language is specified in the request parameters,
-        # scope pages to it to make sure we can raise a 404 if the urlname
-        # is not available in that language.
-        Page.contentpages.where(
-          urlname:       params[:urlname],
-          language_id:   @language.id,
-          language_code: params[:lang] || @language.code
-        ).first
-      else
-        # No urlname was given, so just load the language root for the
-        # currently active language.
-        Page.language_root_for(@language.id)
-      end
-    rescue ArgumentError => e
-      # If encoding errors raises (ie. because of invalid byte chars in params),
-      # we render a 404 page
-      raise ActionController::RoutingError.new(e.message)
+      @page ||= Language.current.pages.contentpages.find_by(
+        urlname: params[:urlname],
+        language_code: params[:locale] || Language.current.code
+      )
     end
 
-    def enforce_primary_host_for_site
-      if needs_redirect_to_primary_host?
-        redirect_to url_for(host: current_site.host), :status => 301
+    # Redirects to given url with 301 status
+    def redirect_permanently_to(url)
+      redirect_to url, status: :moved_permanently
+    end
+
+    # Returns url parameters that are not internal show page params.
+    #
+    # * action
+    # * controller
+    # * urlname
+    # * locale
+    #
+    def additional_params
+      params.symbolize_keys.delete_if do |key, _|
+        [:action, :controller, :urlname, :locale].include?(key)
       end
     end
 
-    def needs_redirect_to_primary_host?
-      current_site.redirect_to_primary_host? &&
-        current_site.host != '*' &&
-        current_site.host != request.host
-    end
+    # == Renders the page :show template
+    #
+    # Handles html and rss requests (for pages containing a feed)
+    #
+    # Omits the layout, if the request is a XHR request.
+    #
+    def render_page
+      respond_to do |format|
+        format.html do
+          render action: :show, layout: !request.xhr?
+        end
 
-    def render_page_or_redirect
-      @page ||= load_page
-      if signup_required?
-        redirect_to signup_path
-      elsif @page.nil? && last_legacy_url
-        @page = last_legacy_url.page
-        redirect_page
-      elsif @page.blank?
-        raise_not_found_error
-      #elsif multi_language? && params[:lang].blank?
-      #  redirect_page(:lang => session[:language_code])
-      elsif multi_language? && params[:urlname].blank? && !params[:lang].blank? && configuration(:redirect_index)
-      #  redirect_page(:lang => params[:lang])
-      #elsif configuration(:redirect_to_public_child) && !@page.public?
-        redirect_to_public_child
-      elsif params[:urlname].blank? && configuration(:redirect_index)
-        redirect_page
-      #elsif !multi_language? && !params[:lang].blank?
-      #  redirect_page
-      elsif @page.has_controller?
-        redirect_to main_app.url_for(@page.controller_and_action)
-      else
-        # setting the language to page.language to be sure it's correct
-        set_language(@page.language)
-        if params[:urlname].blank?
-          @root_page = @page
-        else
-          @root_page = Page.language_root_for(session[:language_id])
+        format.rss do
+          if @page.contains_feed?
+            render action: :show, layout: false, handlers: [:builder]
+          else
+            render xml: {error: 'Not found'}, status: 404
+          end
         end
       end
     end
 
+    def set_expiration_headers
+      if @page.cache_page?
+        expires_in @page.expiration_time, public: !@page.restricted
+      else
+        expires_now
+      end
+    end
+
+    def set_root_page
+      @root_page ||= Language.current_root_page
+    end
+
     def signup_required?
       if Alchemy.user_class.respond_to?(:admins)
-        Alchemy.user_class.admins.size == 0 && @page.nil?
+        Alchemy.user_class.admins.empty? && @page.nil?
       end
     end
 
-    def redirect_to_public_child
-      @page = @page.self_and_descendants.published.not_restricted.first
-      if @page
-        redirect_page
-      else
-        raise_not_found_error
-      end
+    # Returns the etag used for response headers.
+    #
+    # If a user is logged in, we append theirs etag to prevent caching of user related content.
+    #
+    # IMPORTANT:
+    #
+    # If your user does not have a +cache_key+ method (i.e. it's not an ActiveRecord model),
+    # you have to ensure to implement it and return a unique identifier for that particular user.
+    # Otherwise all users will see the same cached page, regardless of user's state.
+    #
+    def page_etag
+      @page.cache_key + current_alchemy_user.try(:cache_key).to_s
     end
 
-    def redirect_page(options={})
-      defaults = {
-        #:lang => (multi_language? ? @page.language_code : nil),
-        :urlname => @page.urlname
-      }
-      options = defaults.merge(options)
-      redirect_to show_page_path(additional_params.merge(options)), :status => 301
+    # We only render the page if either the cache is disabled for this page
+    # or the cache is stale, because it's been republished by the user.
+    #
+    def render_fresh_page?
+      !@page.cache_page? || stale?(etag: page_etag,
+        last_modified: @page.published_at,
+        public: !@page.restricted,
+        template: 'pages/show')
     end
 
-    def additional_params
-      params.each do |key, value|
-        params[key] = nil if ["action", "controller", "urlname", "lang"].include?(key)
-      end
+    def page_not_found!
+      not_found_error!("Alchemy::Page not found \"#{request.fullpath}\"")
     end
-
-    def legacy_urls
-      LegacyPageUrl.joins(:page).where(urlname: params[:urlname], alchemy_pages: {language_id: session[:language_id]})
-    end
-
-    def last_legacy_url
-      legacy_urls.last
-    end
-
   end
 end

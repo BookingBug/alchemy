@@ -1,11 +1,12 @@
 Rails.application.routes.draw do
 
-  match '/404' => 'errors#status_404', :as => :status_404
+  mount JasmineRails::Engine => "/specs" if defined?(JasmineRails)
+
+  get '/login' => 'login#new', as: 'login'
 
   namespace :admin do
     resources :events
   end
 
   mount Alchemy::Engine => "/"
-
 end

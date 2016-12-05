@@ -1,12 +1,10 @@
 module Alchemy
-
   # Methods used for presenting an Alchemy Element.
   #
   module Element::Presenters
     extend ActiveSupport::Concern
 
     module ClassMethods
-
       # Human name for displaying elements in select boxes and element editor views.
       #
       # The name is beeing translated from given name value as described in +config/alchemy/elements.yml+
@@ -23,7 +21,7 @@ module Alchemy
       # If no translation is found a humanized name is used.
       #
       def display_name_for(name)
-        I18n.t(name, scope: 'element_names', default: name.to_s.humanize)
+        Alchemy.t(name, scope: 'element_names', default: name.to_s.humanize)
       end
     end
 
@@ -32,20 +30,20 @@ module Alchemy
     # @see Alchemy::Element::Presenters#display_name_for
     #
     def display_name
-      self.class.display_name_for(description['name'] || self.name)
+      self.class.display_name_for(definition['name'] || name)
     end
 
     # Returns a preview text for element.
     #
-    # It's taken from the first Content found in the +elements.yml+ description file.
+    # It's taken from the first Content found in the +elements.yml+ definition file.
     #
-    # You can flag a Content as +take_me_for_preview+ to take this as preview.
+    # You can flag a Content as +as_element_title+ to take this as preview.
     #
-    # @param maxlength [Fixnum] (30)
+    # @param maxlength [Fixnum] (60)
     #   Length of characters after the text will be cut off.
     #
-    def preview_text(maxlength = 30)
-      (contents.detect(&:preview_content?) || contents.first).try(:preview_text, maxlength)
+    def preview_text(maxlength = 60)
+      preview_text_from_preview_content(maxlength) || preview_text_from_nested_elements(maxlength)
     end
 
     # Generates a preview text containing Element#display_name and Element#preview_text.
@@ -63,7 +61,7 @@ module Alchemy
     #         type: EssenceText
     #       - name: text
     #         type EssenceRichtext
-    #         take_me_for_preview: true
+    #         as_element_title: true
     #
     # With "I want to tell you a funky story" as stripped_body for the EssenceRichtext Content produces:
     #
@@ -82,6 +80,26 @@ module Alchemy
       "#{name}_#{id}"
     end
 
-  end
+    # The content that's used for element's preview text.
+    #
+    # It tries to find one of element's contents that is defined +as_element_title+.
+    # Takes element's first content if no content is defined +as_element_title+.
+    #
+    # @return (Alchemy::Content)
+    #
+    def preview_content
+      @_preview_content ||= contents.detect(&:preview_content?) || contents.first
+    end
 
+    private
+
+    def preview_text_from_nested_elements(maxlength)
+      return unless nested_elements.present?
+      nested_elements.first.preview_text(maxlength)
+    end
+
+    def preview_text_from_preview_content(maxlength)
+      preview_content.try!(:preview_text, maxlength)
+    end
+  end
 end

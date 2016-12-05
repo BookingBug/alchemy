@@ -1,49 +1,30 @@
-<% content_for(:subnav_additions) do %>
-  <% unless @locked_pages.blank? %>
-    <label><%= _t('Active Pages') %> &raquo;</label>
-    <% @locked_pages.each do |page| %>
-    <div class="subnavi_tab wide" id="locked_page_<%= page.id %>">
-      <%= link_to alchemy.edit_admin_page_path(page) do %>
-      <span class="page_name" title="<%= page.name %>">
-        <%= truncate page.name, length: 15 %>
-      </span>
-      <% end %>
-      <%= form_tag(alchemy.unlock_admin_page_path(page), remote: true) do %>
-        <button class="icon_button small" title="<%= _t(:explain_unlocking) %>">
-          <%= render_icon('close small') %>
-        </button>
-      <% end %>
-    </div>
-    <% end %>
-  <% end %>
-<% end %>
-
 <% content_for :toolbar do %>
 <div class="toolbar_buttons">
-  <%= render partial: 'alchemy/admin/partials/language_tree_select' %>
+  <%= render 'alchemy/admin/partials/site_select' %>
+  <%= render 'alchemy/admin/partials/language_tree_select' %>
   <%= toolbar_button(
     icon: 'add_page',
     url: alchemy.new_admin_page_path(parent_id: @layout_root.id, layoutpage: true),
-    hotkey: 'alt-n',
-    overlay_options: {
-      title: _t('Add global page'),
-      size: '340x150',
+    hotkey: 'alt+n',
+    dialog_options: {
+      title: Alchemy.t('Add global page'),
+      size: '340x170',
       overflow: true
     },
-    title: _t('Add global page'),
-    label: _t('Add global page'),
-    if_permitted_to: [:new, :alchemy_admin_pages]
+    title: Alchemy.t('Add global page'),
+    label: Alchemy.t('Add global page'),
+    if_permitted_to: [:create, Alchemy::Page]
   ) %>
   <%= toolbar_button(
     icon: "clipboard#{clipboard_empty?('pages') ? '' : ' full'}",
     url: alchemy.admin_clipboard_path(remarkable_type: 'pages'),
-    overlay_options: {
-      title: _t('Clipboard'),
+    dialog_options: {
+      title: Alchemy.t('Clipboard'),
       size: '380x270'
     },
-    title: _t('Show clipboard'),
+    title: Alchemy.t('Show clipboard'),
     id: "clipboard_button",
-    label: _t('Show clipboard')
+    label: Alchemy.t('Show clipboard')
   ) %>
 </div>
 <% end %>

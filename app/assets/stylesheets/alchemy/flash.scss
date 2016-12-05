@@ -13,7 +13,7 @@ div#flash_notices {
       position: absolute;
       right: 2*$default-padding;
       top: 2*$default-padding;
-      @extend .alchemy-icon-cross:before;
+      @extend .icon-cross:before;
       font-size: 14px;
       font-family: 'Alchemy Icons';
     }
@@ -21,7 +21,7 @@ div#flash_notices {
 }
 
 div.flash {
-  @extend .rounded-border;
+  @extend %rounded-border;
   @include opacity(0.95);
   padding: 8px 8px 8px 30px;
   font-weight: bold;
@@ -31,6 +31,7 @@ div.flash {
   margin: $default-margin;
   position: relative;
   min-height: 1.3em;
+  word-break: break-all;
 
   span.icon {
     position: absolute;
@@ -39,9 +40,9 @@ div.flash {
   }
 
   &.notice {
-    border-color: #9cc4a1;
-    color: #2e5934;
-    background-color: #e2efd3;
+    border-color: $success_border_color;
+    color: $success_text_color;
+    background-color: $success_background_color;
   }
 
   &.error {
@@ -51,14 +52,14 @@ div.flash {
   }
 
   &.info {
-    border-color: #8392b5;
-    color: #233772;
-    background-color: #cadbf3;
+    border-color: $info_border_color;
+    color: $info_text_color;
+    background-color: $info_background_color;
   }
 
   &.warn, &.warning, &.alert {
-    border-color: #c4c19c;
-    color: #726d23;
-    background-color: #f3f0c1;
+    border-color: $warning_border_color;
+    color: $warning_text_color;
+    background-color: $warning_background_color;
   }
 }

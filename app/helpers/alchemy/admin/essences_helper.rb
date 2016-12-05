@@ -1,47 +1,13 @@
 module Alchemy
   module Admin
     module EssencesHelper
-
       include Alchemy::EssencesHelper
       include Alchemy::Admin::ContentsHelper
 
       # Renders the Content editor partial from the given Content.
       # For options see -> render_essence
       def render_essence_editor(content, options = {}, html_options = {})
-        render_essence(content, :editor, {:for_editor => options}, html_options)
-      end
-
-      # Renders the Content editor partial from essence_type.
-      #
-      # Options are:
-      #   * element (Element) - the Element the contents are in (obligatory)
-      #   * type (String) - the type of Essence (obligatory)
-      #   * options (Hash):
-      #   ** :position (Integer) - The position of the Content inside the Element. I.E. for getting the n-th EssencePicture. Default is 1 (the first)
-      #   ** :all (String) - Pass :all to get all Contents of that name. Default false
-      #   * editor_options (Hash) - Will be passed to the render_essence_editor partial renderer
-      #
-      def render_essence_editor_by_type(element, essence_type, options = {}, editor_options = {})
-        ActiveSupport::Deprecation.warn("Used deprecated render_essence_editor_by_type helper. It will be removed in Alchemy v3.0. You can use render_essence_editor_by_name instead.")
-        return warning('Element is nil', _t(:no_element_given)) if element.blank?
-        return warning('EssenceType is blank', _t("No EssenceType given")) if essence_type.blank?
-        defaults = {
-          :position => 1,
-          :all => false
-        }
-        options = defaults.merge(options)
-        essence_type = Alchemy::Content.normalize_essence_type(essence_type)
-        return_string = ""
-        if options[:all]
-          contents = element.contents.find_all_by_essence_type_and_name(essence_type, options[:all])
-          contents.each do |content|
-            return_string << render_essence_editor(content, editor_options)
-          end
-        else
-          content = element.contents.find_by_essence_type_and_position(essence_type, options[:position])
-          return_string = render_essence_editor(content, editor_options)
-        end
-        return_string
+        render_essence(content, :editor, {for_editor: options}, html_options)
       end
 
       # Renders the Content editor partial found in views/contents/ for the content with name inside the passed Element.
@@ -53,57 +19,13 @@ module Alchemy
       #
       def render_essence_editor_by_name(element, name, options = {}, html_options = {})
         if element.blank?
-          return warning('Element is nil', _t(:no_element_given))
+          return warning('Element is nil', Alchemy.t(:no_element_given))
         end
         content = element.content_by_name(name)
         if content.nil?
           render_missing_content(element, name, options)
         else
           render_essence_editor(content, options, html_options)
-        end
-      end
-
-      # Renders the EssenceSelect editor partial with a form select for storing page ids
-      #
-      # === Options:
-      #
-      #   :only            [Hash]     # Pagelayout names. Only pages with this page_layout will be displayed inside the select.
-      #   :page_attribute  [Symbol]   # The Page attribute which will be stored. Default is id.
-      #   :global          [Boolean]  # Display only global pages. Default is false.
-      #   :order_by        [Symbol]   # Order pages by this attribute.
-      #
-      # NOTE: The +order_by+ option only works if the +only+ or the +global+ option is also set.
-      # Then the default ordering is by :name.
-      # Otherwise the pages are ordered by their position in the nested set.
-      #
-      def page_selector(element, content_name, options = {}, select_options = {})
-        ActiveSupport::Deprecation.warn("Used deprecated page_selector helper. It will be removed in Alchemy v3.0. Please use a select_tag with pages_for_select instead.")
-        default_options = {
-          :page_attribute => :id,
-          :global => false,
-          :prompt => _t('Choose page'),
-          :order_by => :name
-        }
-        options = default_options.merge(options)
-        content = element.content_by_name(content_name)
-        if options[:global] || options[:only].present?
-          pages = Page.where({
-            :language_id => session[:language_id],
-            :layoutpage => options[:global] == true,
-            :public => options[:global] == false
-          })
-          if options[:only].present?
-            pages = pages.where({:page_layout => options[:only]})
-          end
-          pages_options_tags = pages_for_select(pages.order(options[:order_by]), content ? content.ingredient : nil, options[:prompt], options[:page_attribute])
-        else
-          pages_options_tags = pages_for_select(nil, content ? content.ingredient : nil, options[:prompt], options[:page_attribute])
-        end
-        options.update(:select_values => pages_options_tags)
-        if content.nil?
-          render_missing_content(element, content_name, options)
-        else
-          render_essence_editor(content, options)
         end
       end
 
@@ -119,10 +41,10 @@ module Alchemy
       #   Method that is called on the page object to get the value that is passed with the params of the form.
       #
       def pages_for_select(pages = nil, selected = nil, prompt = "Choose page", page_attribute = :id)
-        values = [[_t(prompt), ""]]
+        values = [[Alchemy.t(prompt), ""]]
         pages ||= begin
           nested = true
-          Page.with_language(session[:language_id]).published.order(:lft)
+          Language.current.pages.published.order(:lft)
         end
         values += pages_attributes_for_select(pages, page_attribute, nested)
         options_for_select(values, selected.to_s)
@@ -135,26 +57,53 @@ module Alchemy
       end
 
       def essence_picture_thumbnail(content, options)
-        return if content.ingredient.blank?
+        ingredient = content.ingredient
+        essence = content.essence
+        return if ingredient.blank?
+
+        crop = !(essence.crop_size.blank? && essence.crop_from.blank?) ||
+               (
+                 content.settings_value(:crop, options) == true ||
+                 content.settings_value(:crop, options) == "true"
+               )
+
+        size = if essence.render_size.blank?
+                 content.settings_value(:size, options)
+               else
+                 essence.render_size
+               end
+
         image_options = {
-          :size => content.ingredient.cropped_thumbnail_size(content.essence.render_size.blank? ? options[:image_size] : content.essence.render_size),
-          :crop_from => content.essence.crop_from.blank? ? nil : content.essence.crop_from,
-          :crop_size => content.essence.crop_size.blank? ? nil : content.essence.crop_size,
-          :crop => content.essence.crop_size.blank? && content.essence.crop_from.blank? ? 'crop' : nil
+          size: essence.thumbnail_size(size, crop),
+          crop_from: essence.crop_from.blank? ? nil : essence.crop_from,
+          crop_size: essence.crop_size.blank? ? nil : essence.crop_size,
+          crop: crop ? 'crop' : nil,
+          upsample: content.settings_value(:upsample, options)
         }
+
         image_tag(
           alchemy.thumbnail_path({
-            :id => content.ingredient.id,
-            :name => content.ingredient.urlname,
-            :sh => content.ingredient.security_token(image_options)
+            id: ingredient.id,
+            name: ingredient.urlname,
+            sh: ingredient.security_token(image_options),
+            format: ingredient.image_file_format
           }.merge(image_options)),
-          :alt => content.ingredient.name,
-          :class => 'img_paddingtop',
-          :title => _t(:image_name) + ": #{content.ingredient.name}"
+          alt: ingredient.name,
+          class: 'img_paddingtop',
+          title: Alchemy.t(:image_name) + ": #{ingredient.name}"
         )
       end
 
-    private
+      # Size value for edit picture dialog
+      def edit_picture_dialog_size(content, options = {})
+        if content.settings_value(:caption_as_textarea, options)
+          content.settings_value(:sizes, options) ? '380x320' : '380x300'
+        else
+          content.settings_value(:sizes, options) ? '380x290' : '380x255'
+        end
+      end
+
+      private
 
       # Returns an Array with page attributes for select options
       #
@@ -188,7 +137,6 @@ module Alchemy
           page.name
         end
       end
-
     end
   end
 end

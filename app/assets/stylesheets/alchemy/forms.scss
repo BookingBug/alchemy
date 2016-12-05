@@ -1,0 +1,228 @@
+form {
+
+  #main_content > &.alchemy {
+    max-width: 600px;
+    padding: 2*$default-padding;
+    margin: 2em auto;
+  }
+
+  &.button-with-confirm {
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+  }
+
+  &.edit_page textarea {
+    height: 67px;
+  }
+
+  > h2 {
+    @include form-heading;
+  }
+
+  .control-label {
+    @include form-label;
+  }
+
+  .input {
+    padding: $default-padding 0;
+    @include pie-clearfix;
+
+    > input[type="url"],
+    > input[type="text"],
+    > input[type="email"],
+    > input[type="password"],
+    > textarea,
+    > .select2-container,
+    > .autocomplete_tag_list,
+    > .mce-tinymce {
+      width: $form-right-width;
+      float: right;
+    }
+
+    > .autocomplete_tag_list {
+
+      .select2-container, .select2-choices {
+        width: 100%;
+      }
+    }
+
+    ::-webkit-input-placeholder {
+      line-height: 16px;
+    }
+
+    &.select, &.grouped_select {
+
+      .select2-container {
+        margin: 4px 0;
+      }
+    }
+
+    &.boolean {
+      margin-left: $form-left-width;
+
+      label {
+        width: 100%;
+        text-align: left;
+        padding: 0;
+        margin: $default-margin 0;
+        float: none;
+        margin-left: 4px;
+      }
+    }
+
+    label.checkbox {
+      display: block;
+      margin: $default-margin 0;
+
+      input {
+        margin-right: $default-margin;
+        margin-left: 1px;
+      }
+    }
+
+    &.field_with_errors {
+
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      textarea,
+      .select2-choices {
+        @extend %field-with-error
+      }
+
+      .select2-choice, .select2-choices {
+        border-color: $error_border_color;
+        color: $error_text_color;
+        margin-bottom: 4px;
+
+        input[type="text"] {
+          @include box-shadow(none);
+        }
+      }
+
+      label { color: $error_text_color }
+    }
+
+    small.error {
+      color: $error_text_color;
+      display: block;
+      margin-left: $form-left-width;
+      line-height: 1.5em;
+      clear: both;
+      text-align: right;
+      margin-bottom: 0.25em;
+    }
+
+    &.language_locale small.error {
+      @include form-hint(
+        $background-color: $error_background_color,
+        $border-color: $error_border_color
+      );
+      text-align: left;
+    }
+  }
+
+  .inline-input {
+    @include clearfix;
+    margin: 0 -1*$default-margin;
+    @include box-sizing(border-box);
+
+    .left-column, .right-column {
+      padding: 0 $default-padding;
+      @include box-sizing(border-box);
+    }
+
+    .left-column {
+      width: $form-right-width;
+      float: left;
+    }
+
+    .right-column {
+      width: $form-left-width;
+      float: right;
+    }
+
+    button,
+    .button,
+    input[type="url"],
+    input[type="text"],
+    input[type="email"],
+    input[type="submit"],
+    input[type="password"] {
+      width: 100%;
+    }
+  }
+
+  .control_group {
+    width: $form-right-width;
+    padding-top: 6px;
+    float: right;
+  }
+
+  .foot_note, .input .hint {
+    margin-left: $form-left-width;
+  }
+
+  .submit {
+    padding: $default-padding 0;
+    text-align: right;
+  }
+
+  .input-column {
+    @include box-sizing(border-box);
+    float: left;
+    padding: 0 $default-padding;
+    width: 50%;
+  }
+
+  .input-row {
+
+    .input-column {
+
+      &:first-of-type {
+        padding-left: 0;
+      }
+
+      &:last-of-type {
+        padding-right: 0;
+      }
+    }
+  }
+}
+
+textarea#essence_picture_caption {
+  height: 61px;
+}
+
+.resource_info {
+
+  h2 {
+    @include form-heading;
+  }
+
+  .value {
+    overflow: hidden;
+
+    label {
+      @include form-label;
+    }
+
+    p {
+      @include form-value-display;
+    }
+  }
+}
+
+// styles for link overlay selects
+.window_form {
+
+  .select2-container {
+    width: 100%;
+  }
+}
+
+.input-column > label {
+  display: block;
+  margin-top: $default-margin +1;
+}

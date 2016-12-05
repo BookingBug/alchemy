@@ -1,65 +1,57 @@
 module Alchemy
   module Tinymce
-    mattr_accessor :languages, :themes, :plugins, :setup
+    mattr_accessor :languages, :plugins
 
-    @@setup = nil
-    @@plugins = %w(alchemy_link autoresize fullscreen inlinepopups paste table)
+    @@plugins = %w(alchemy_link anchor autoresize charmap code directionality fullscreen hr link paste tabfocus table)
     @@languages = ['en', 'de']
-    @@themes = ['advanced']
     @@init = {
-      paste_convert_headers_to_strong: true,
-      paste_convert_middot_lists: true,
-      paste_remove_spans: true,
-      paste_remove_styles: true,
-      paste_strip_class_attributes: true,
-      theme: 'advanced',
-      skin: 'o2k7',
-      skin_variant: 'silver',
-      inlinepopups_skin: 'alchemy-tinymce-dialog',
-      popup_css: "/assets/alchemy/tinymce_dialog.css",
-      content_css: "/assets/alchemy/tinymce_content.css",
-      dialog_type: "modal",
-      width: "100%",
-      theme_advanced_resizing: true,
-      theme_advanced_resize_horizontal: false,
-      theme_advanced_resizing_min_height: '135',
-      theme_advanced_toolbar_align: 'left',
-      theme_advanced_toolbar_location: 'top',
-      theme_advanced_statusbar_location: 'bottom',
-      theme_advanced_buttons1: 'bold,italic,underline,strikethrough,sub,sup,|,numlist,bullist,indent,outdent,|,alchemy_link,unlink,|,removeformat,cleanup,|,fullscreen',
-      theme_advanced_buttons2: 'pastetext,pasteword,charmap,code,help',
-      theme_advanced_buttons3: '',
+      skin: 'alchemy',
+      width: '100%',
+      resize: true,
+      autoresize_min_height: '105',
+      autoresize_max_height: '480',
+      menubar: false,
+      statusbar: true,
+      toolbar: [
+        'bold italic underline | strikethrough subscript superscript | numlist bullist indent outdent | removeformat | fullscreen',
+        'pastetext charmap hr | undo redo | alchemy_link unlink anchor | code'
+      ],
       fix_list_elements: true,
       convert_urls: false,
-      entity_encoding: "raw"
+      entity_encoding: 'raw',
+      paste_as_text: true,
+      element_format: 'html'
     }
 
-    def self.init=(settings)
-      @@init.merge!(settings)
+    class << self
+      def init=(settings)
+        @@init.merge!(settings)
+      end
+
+      def init
+        @@init
+      end
+
+      def custom_config_contents(page = nil)
+        if page
+          content_definitions_from_elements(page.element_definitions)
+        else
+          content_definitions_from_elements(Element.definitions)
+        end
+      end
+
+      private
+
+      def content_definitions_from_elements(definitions)
+        definitions.collect do |el|
+          next if el['contents'].blank?
+          contents = el['contents'].select do |c|
+            c['settings'] && c['settings']['tinymce'].is_a?(Hash)
+          end
+          next if contents.blank?
+          contents.map { |c| c.merge('element' => el['name']) }
+        end.flatten.compact
+      end
     end
-
-    def self.init
-      @@init
-    end
-
-    def self.custom_config_contents
-      @@custom_config_contents ||= content_definitions_from_elements(Element.definitions)
-    end
-
-    def self.page_custom_config_contents(page)
-      content_definitions_from_elements(page.element_definitions)
-    end
-
-  private
-
-    def self.content_definitions_from_elements(definitions)
-      definitions.collect do |el|
-        next if el['contents'].blank?
-        contents = el['contents'].select { |c| c['settings'] && c['settings']['tinymce'].present? }
-        next if contents.blank?
-        contents.map { |c| c.merge('element' => el['name']) }
-      end.flatten.compact
-    end
-
   end
 end

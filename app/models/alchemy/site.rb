@@ -1,7 +1,19 @@
+# == Schema Information
+#
+# Table name: alchemy_sites
+#
+#  id                       :integer          not null, primary key
+#  host                     :string(255)
+#  name                     :string(255)
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  public                   :boolean          default(FALSE)
+#  aliases                  :text
+#  redirect_to_primary_host :boolean
+#
+
 module Alchemy
   class Site < ActiveRecord::Base
-    attr_accessible :host, :aliases, :name, :public, :redirect_to_primary_host
-
     # validations
     validates_presence_of :host
     validates_uniqueness_of :host
@@ -10,6 +22,9 @@ module Alchemy
     has_many :languages
 
     scope :published, -> { where(public: true) }
+
+    # Callbacks
+    before_create :create_default_language, unless: -> { languages.any? }
 
     # concerns
     include Alchemy::Site::Layout
@@ -26,16 +41,24 @@ module Alchemy
     # Please use <tt>rails g alchemy:site_layouts</tt> to generate partials for all your sites.
     #
     def to_partial_path
-      "alchemy/site_layouts/#{layout_partial_name}"
+      "alchemy/site_layouts/#{partial_name}"
+    end
+
+    # The default language for this site
+    #
+    # There can only be one default language per site.
+    #
+    def default_language
+      languages.find_by(default: true)
     end
 
     class << self
       def current=(v)
-        Thread.current[:alchemy_current_site] = v
+        RequestStore.store[:alchemy_current_site] = v
       end
 
       def current
-        Thread.current[:alchemy_current_site] || default
+        RequestStore.store[:alchemy_current_site] || default
       end
 
       def default
@@ -46,7 +69,7 @@ module Alchemy
         # These are split up into two separate queries in order to run the
         # fastest query first (selecting the domain by its primary host name).
         #
-        where(host: host).first || find_in_aliases(host) || default
+        find_by(host: host) || find_in_aliases(host) || default
       end
 
       def find_in_aliases(host)
@@ -58,22 +81,21 @@ module Alchemy
       end
     end
 
-    before_create do
-      # If no languages are present, create a default language based
-      # on the host app's Alchemy configuration.
+    private
 
-      if languages.empty?
-        default_language = Alchemy::Config.get(:default_language)
-        languages.build(
-          name:           default_language['name'],
-          language_code:  default_language['code'],
-          frontpage_name: default_language['frontpage_name'],
-          page_layout:    default_language['page_layout'],
-          public:         true,
-          default:        true
-        )
-      end
+    # If no languages are present, create a default language based
+    # on the host app's Alchemy configuration.
+    def create_default_language
+      default_language = Alchemy::Config.get(:default_language)
+      languages.build(
+        name:           default_language['name'],
+        language_code:  default_language['code'],
+        locale:         default_language['code'],
+        frontpage_name: default_language['frontpage_name'],
+        page_layout:    default_language['page_layout'],
+        public:         true,
+        default:        true
+      )
     end
-
   end
 end

@@ -1,4 +1,9 @@
-window.Alchemy = {}  if typeof (Alchemy) is "undefined"
+#= require alchemy/alchemy.jquery_loader
+#= require alchemy/alchemy.browser
+#= require alchemy/alchemy.i18n
+
+window.Alchemy = {} if typeof(Alchemy) is 'undefined'
+
 Alchemy.initAlchemyPreviewMode = ($) ->
 
   # Setting jQueryUIs global animation duration
@@ -6,6 +11,7 @@ Alchemy.initAlchemyPreviewMode = ($) ->
 
   # The Alchemy JavaScript Object contains all Functions
   $.extend Alchemy,
+
     ElementSelector:
 
       # defaults
@@ -16,88 +22,91 @@ Alchemy.initAlchemyPreviewMode = ($) ->
           outline: ""
           "outline-offset": ""
           "-moz-outline-radius": ""
-
         default_hover:
           outline: "3px solid #F0B437"
           "outline-offset": "4px"
-
+          cursor: "pointer"
         webkit_hover:
           outline: "4px auto #F0B437"
-
         moz_hover:
           "-moz-outline-radius": "3px"
-
         default_selected:
           outline: "3px solid #90B9D0"
           "outline-offset": "4px"
-
         webkit_selected:
           outline: "4px auto #90B9D0"
-
         moz_selected:
           "-moz-outline-radius": "3px"
 
       init: ->
-        self = Alchemy.ElementSelector
         $elements = $("[data-alchemy-element]")
-        $elements.bind "mouseover", (e) ->
-          $(this).attr("title", "Klicken zum bearbeiten")
-          $(this).css(self.getStyle("hover")) unless $(this).hasClass("selected")
+        @$previewElements = $elements
+        $elements.mouseover (e) =>
+          $el = $(e.delegateTarget)
+          $el.attr("title", Alchemy.t('click_to_edit'))
+          $el.css(@getStyle("hover")) unless $el.hasClass("selected")
+          return
+        $elements.mouseout (e) =>
+          $el = $(e.delegateTarget)
+          $el.removeAttr("title")
+          $el.css(@getStyle("reset")) unless $el.hasClass("selected")
+          return
+        $elements.on "SelectPreviewElement.Alchemy", (e) =>
+          $el = $(e.delegateTarget)
+          # Stop the event from bubbling up to parent elements
+          e.stopPropagation()
+          @selectElement($el)
+          return
+        $elements.click (e) =>
+          $el = $(e.delegateTarget)
+          # Stop the event from bubbling up to parent elements
+          e.stopPropagation()
+          # Stop default click events from running
+          e.preventDefault()
+          # Mark current preview element as selected
+          @selectElement($el)
+          # Focus the element editor
+          @focusElementEditor($el)
+          return
+        return
 
-        $elements.bind "mouseout", ->
-          $(this).removeAttr("title")
-          $(this).css(self.getStyle("reset")) unless $(this).hasClass("selected")
-
-        $elements.bind("Alchemy.SelectElement", self.selectElement)
-        $elements.bind("click", self.clickElement)
-        self.$previewElements = $elements
-
-      selectElement: (e) ->
-        $this = $(this)
-        self = Alchemy.ElementSelector
-        $elements = self.$previewElements
-        offset = self.scrollOffset
-        e.preventDefault()
-        $elements.removeClass("selected").css(self.getStyle("reset"))
-        $this.addClass("selected").css(self.getStyle("selected"))
+      # Mark element in preview frame as selected and scrolls to it.
+      selectElement: ($el) ->
+        offset = $el.offset()
+        @$previewElements.removeClass("selected").css(@getStyle("reset"))
+        $el.addClass("selected").css(@getStyle("selected"))
         $("html, body").animate
-          scrollTop: $this.offset().top - offset
-          scrollLeft: $this.offset().left - offset
+          scrollTop: offset.top - @scrollOffset
+          scrollLeft: offset.left - @scrollOffset
         , 400
         return
 
-      clickElement: (e) ->
-        $this = $(this)
-        parent$ = window.parent.jQuery
-        target_id = $this.data("alchemy-element")
-        $element_editor = parent$("#element_area .element_editor").closest("[id=\"element_" + target_id + "\"]")
-        $elementsWindow = parent$("#alchemyElementWindow")
-        e.preventDefault()
-        $element_editor.trigger("Alchemy.SelectElementEditor", target_id)
-        if $elementsWindow.dialog
-          if $elementsWindow.dialog("isOpen")
-            $elementsWindow.dialog("moveToTop")
-          else
-            $elementsWindow.dialog "open"
-        $this.trigger("Alchemy.SelectElement")
+      # Focus the element editor in the Alchemy element window.
+      focusElementEditor: ($el) ->
+        alchemy_window = window.parent
+        alchemy_$ = alchemy_window.jQuery
+        target_id = $el.data("alchemy-element")
+        $element_editor = alchemy_$("#element_#{target_id}")
+        elements_window = alchemy_window.Alchemy.ElementsWindow
+        $element_editor.trigger("FocusElementEditor.Alchemy", target_id)
+        elements_window.show() if elements_window.hidden
         return
 
       getStyle: (state) ->
-        self = Alchemy.ElementSelector
         if state == "reset"
-          self.styles["reset"]
+          @styles["reset"]
         else
-          default_state_style = self.styles["default_#{state}"]
+          default_state_style = @styles["default_#{state}"]
           browser = "webkit" if Alchemy.Browser.isWebKit
           browser = "moz" if Alchemy.Browser.isFirefox
           if browser
-            $.extend(default_state_style, self.styles["#{browser}_#{state}"])
+            $.extend(default_state_style, @styles["#{browser}_#{state}"])
           else
             default_state_style
 
   Alchemy.ElementSelector.init()
 
-if typeof (jQuery) is "undefined"
+if typeof(jQuery) is 'undefined'
   Alchemy.loadjQuery(Alchemy.initAlchemyPreviewMode)
 else
   Alchemy.initAlchemyPreviewMode(jQuery)

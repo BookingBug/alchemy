@@ -1,1 +1,3 @@
-<%= raw content.essence.source %>
+<% cache(content) do %>
+<%= raw content.ingredient -%>
+<% end %>

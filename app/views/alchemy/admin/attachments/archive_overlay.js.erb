@@ -1,4 +1,6 @@
-jQuery('#alchemy_window_body').replaceWith('<%= escape_javascript(render(:partial => "archive_overlay")) %>');
-Alchemy.SelectBox('#filter_bar');
-Alchemy.overlayObserver('#alchemy_window_body');
-Alchemy.ListFilter('#alchemy_window_body');
+(function() {
+  var dialog = Alchemy.currentDialog();
+  dialog.dialog_body.html('<%= j render("archive_overlay") %>');
+  Alchemy.SelectBox('#filter_bar');
+  Alchemy.ListFilter(dialog.dialog_body);
+})();

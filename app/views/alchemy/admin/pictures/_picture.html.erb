@@ -2,81 +2,52 @@
   <span class="picture_tool select">
     <%= check_box_tag "picture_ids[]", picture.id %>
   </span>
-  <% if permitted_to?(:destroy, :alchemy_admin_pictures) && picture.deletable? %>
+  <% if picture.deletable? && can?(:destroy, picture) %>
   <span class="picture_tool delete">
-    <%= link_to_confirmation_window(
+    <%= link_to_confirm_dialog(
       "",
-      _t(:confirm_to_delete_image_from_server),
+      Alchemy.t(:confirm_to_delete_image_from_server),
       alchemy.admin_picture_path(
-        :id => picture,
-        :query => params[:query],
-        :page => params[:page],
-        :tagged_with => params[:tagged_with],
-        :size => params[:size],
-        :filter => params[:filter]
+        id: picture,
+        q: params[:q],
+        page: params[:page],
+        tagged_with: params[:tagged_with],
+        size: params[:size],
+        filter: params[:filter]
       ),
       {
-        :title => _t('Delete image')
+        title: Alchemy.t('Delete image')
       }
     ) -%>
   </span>
   <% end %>
-  <% permitted_to?(:edit, :alchemy_admin_pictures) do %>
-  <span class="picture_tool edit">
-    <%= link_to_overlay_window(
-      "",
-      alchemy.edit_admin_picture_path(
-        :id => picture,
-        :query => params[:query],
-        :page => params[:page],
-        :tagged_with => params[:tagged_with],
-        :size => params[:size],
-        :filter => params[:filter]
-      ),
-      {
-        :title => _t('Edit image'),
-        :size => "400x180"
-      },
-      {
-        :title => _t('Edit image')
-      }
-    ) -%>
-  </span>
-  <% end %>
-  <% permitted_to?(:info, :alchemy_admin_pictures) do %>
-  <span class="picture_tool info">
-    <%= link_to_overlay_window(
-      "",
-      alchemy.info_admin_picture_path(
-        :id => picture,
-        :query => params[:query],
-        :page => params[:page],
-        :tagged_with => params[:tagged_with],
-        :size => params[:size],
-        :filter => params[:filter]
-      ),
-      {
-        :title => _t('Picture infos'),
-        :size => "400x300"
-      },
-      {
-        :title => _t('Show picture infos')
-      }
-    ) -%>
-  </span>
-  <% end %>
-  <%= link_to(
-    image_tag(
-      alchemy.thumbnail_path(:id => picture, :size => @size, :sh => picture.security_token(:size => @size)),
-      :alt => picture.name,
-      :title => _t(:zoom_image)
+  <% image = image_tag(
+    alchemy.thumbnail_path(
+      id: picture,
+      size: @size,
+      sh: picture.security_token(size: @size),
+      format: picture.image_file_format
     ),
-    '#',
-    :onclick => "Alchemy.zoomImage('#{admin_picture_path(:id => picture.id, :sh => picture.security_token)}', '#{picture.name}', #{picture.image_file_width || 320}, #{picture.image_file_height || 240})",
-    :class => 'thumbnail_background',
-    :id => 'show_in_window'
+    alt: picture.name,
+    title: Alchemy.t(:zoom_image)
   ) %>
-  <span class="picture_name" title="<%= picture.name %>" id="image_picture_<%= picture.id %>_name">
+  <% if can?(:edit, picture) %>
+    <%= link_to(
+      image,
+      alchemy.admin_picture_path(
+        id: picture,
+        q: params[:q],
+        page: params[:page],
+        tagged_with: params[:tagged_with],
+        size: params[:size],
+        filter: params[:filter]
+      ),
+      class: 'thumbnail_background'
+    ) %>
+  <% else %>
+    <%= image %>
+  <% end %>
+  <span class="picture_name" title="<%= picture.name %>">
     <%= picture.name %>
   </span>
   <div class="picture_tags">

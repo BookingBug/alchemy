@@ -1,4 +1,4 @@
-<% label_title = _t("Create #{resource_name}", default: _t('Create')) %>
+<% label_title = Alchemy.t("Create #{resource_name}", default: Alchemy.t('Create')) %>
 
 <% toolbar(
   buttons: [
@@ -7,26 +7,38 @@
       label: label_title,
       url: new_resource_path,
       title: label_title,
-      hotkey: 'alt-n',
-      overlay_options: {
+      hotkey: 'alt+n',
+      dialog_options: {
         title: label_title,
         size: resource_window_size
       },
-      if_permitted_to: [:new, resource_permission_scope]
+      if_permitted_to: [:create, resource_model]
     },
     {
       icon: 'download',
-      url: resource_url_proxy.url_for(action: 'index', format: 'csv', query: params[:query], sort: params[:sort]),
-      label: _t(:download_csv),
-      title: _t(:download_csv),
-      overlay: false,
+      url: resource_url_proxy.url_for(action: 'index', format: 'csv', q: params[:q], sort: params[:sort]),
+      label: Alchemy.t(:download_csv),
+      title: Alchemy.t(:download_csv),
+      dialog: false,
       loading_indicator: false,
-      if_permitted_to: [:index, resource_permission_scope]
+      if_permitted_to: [:index, resource_model]
     }
   ]
 ) %>
 
-<div id="archive_all">
+<div id="archive_all" class="resources-table-wrapper<%= ' with_tag_filter' if resource_has_tags || resource_has_filters %>">
   <%= resources_header %>
   <%= render 'table' %>
+
+  <% if resource_has_tags || resource_has_filters %>
+    <div id="library_sidebar">
+      <% if resource_has_filters %>
+        <%= render 'filter_bar' %>
+      <% end %>
+
+      <% if resource_has_tags %>
+        <%= render 'tag_list' %>
+      <% end %>
+    </div>
+  <% end %>
 </div>

@@ -1,24 +1,26 @@
-<p class="center with_margin"><%= image_tag('alchemy/alchemy-logo.png') %></p>
-<h2 class="center with_margin">
-  <%= _t("Version") %>: <%= @alchemy_version %>
+<p class="center"><%= image_tag('alchemy/alchemy-logo.svg') %></p>
+<h2 class="center">
+  <%= Alchemy.t("Version") %>: <%= @alchemy_version %>
 </h2>
-<p class="center with_margin" id="update_check">
+<% if can? :update_check, :alchemy_admin_dashboard %>
+<p class="center" id="update_check">
   <span id="update_available">
-    <%= render_icon('warn') %>
-    <%= _t 'Update available' %>
+    <%= render_icon('warning') %>
+    <%= Alchemy.t 'Update available' %>
   </span>
   <span id="up_to_date">
-    <%= render_icon('tick') %>
-    <%= _t 'Alchemy is up to date' %>
+    <%= render_icon('ok') %>
+    <%= Alchemy.t 'Alchemy is up to date' %>
   </span>
   <span id="error">
-    <%= render_icon('error') %>
-    <%= _t 'Update status unavailable' %>
+    <%= render_icon('warning') %>
+    <%= Alchemy.t 'Update status unavailable' %>
   </span>
 </p>
-<div class="info with_margin">
+<% end %>
+<div class="info">
   <%= render_icon('info') %>
-  <p><%= _t('Alchemy is open software and itself uses open software and free resources:') %></p>
+  <p><%= Alchemy.t('Alchemy is open software and itself uses open software and free resources:') %></p>
   <ul>
     <li>
       <a href="http://rubyonrails.org" target="_blank">RubyOnRails</a>
@@ -33,13 +35,14 @@
       <a href="http://tinymce.moxiecode.com" target="_blank">TinyMCE - Javascript WYSIWYG Editor</a>
     </li>
     <li>
-      <a href="http://swfupload.org" target="_blank">SWFUpload</a>
+      <a href="http://blueimp.github.io/jQuery-File-Upload/" target="_blank">jQuery File Upload</a>
     </li>
     <li>
       <a href="http://p.yusukekamiyamane.com" target="_blank">Fugue Icons by Yusuke Kamiyamane</a>
     </li>
   </ul>
 </div>
+<% if can? :update_check, :alchemy_admin_dashboard %>
 <script type="text/javascript">
   (function() {
     var el = $('#update_check');
@@ -58,3 +61,4 @@
     });
   })();
 </script>
+<% end %>

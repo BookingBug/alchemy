@@ -2,19 +2,38 @@ module Alchemy
   module Admin
     class BaseController < Alchemy::BaseController
       include Userstamp
+      include Locale
 
-      before_filter { enforce_ssl if ssl_required? && !request.ssl? }
-      before_filter :set_translation
+      before_action { enforce_ssl if ssl_required? && !request.ssl? }
+      before_action :load_locked_pages
 
       helper_method :clipboard_empty?, :trash_empty?, :get_clipboard, :is_admin?
 
-      filter_access_to :all
+      check_authorization
 
-      rescue_from Exception, :with => :exception_handler unless Rails.env == 'test'
+      rescue_from Exception do |exception|
+        if exception.is_a? CanCan::AccessDenied
+          permission_denied(exception)
+        elsif raise_exception?
+          raise
+        else
+          exception_handler(exception)
+        end
+      end
 
-      layout 'alchemy/admin'
+      layout :set_layout
+
+      def leave
+        authorize! :leave, :alchemy_admin
+        render template: '/alchemy/admin/leave', layout: !request.xhr?
+      end
 
       private
+
+      # Disable layout rendering for xhr requests.
+      def set_layout
+        request.xhr? ? false : 'alchemy/admin'
+      end
 
       # Handles exceptions
       def exception_handler(e)
@@ -32,9 +51,9 @@ module Alchemy
         @notice = e.message[0..255]
         @trace = e.backtrace[0..50]
         if request.xhr?
-          render :action => "error_notice", :layout => false
+          render action: "error_notice"
         else
-          render '500', :status => 500
+          render '500', status: 500
         end
       end
 
@@ -46,21 +65,15 @@ module Alchemy
         end
       end
 
-      def get_clipboard
-        session[:clipboard] ||= Clipboard.new
-      rescue NoMethodError => e
-        exception_logger(e)
-        @notice = "You have an old style clipboard in your session. Please remove your cookies and try again."
-        render :action => "error_notice", :layout => false
+      # Returns clipboard items for given category
+      def get_clipboard(category)
+        session[:alchemy_clipboard] ||= {}
+        session[:alchemy_clipboard][category.to_s] ||= []
       end
 
-      def clipboard_empty?(category = nil)
-        return true if session[:clipboard].blank?
-        if category
-          session[:clipboard][category.pluralize].blank?
-        else
-          false
-        end
+      # Checks if clipboard for given category is blank
+      def clipboard_empty?(category)
+        get_clipboard(category).blank?
       end
 
       def trash_empty?(category)
@@ -94,42 +107,29 @@ module Alchemy
       #
       def render_errors_or_redirect(object, redirect_url, flash_notice)
         if object.errors.empty?
-          @redirect_url = redirect_url
-          flash[:notice] = _t(flash_notice)
-          respond_to do |format|
-            format.js   { render :action => :redirect }
-            format.html { redirect_to @redirect_url }
-          end
+          flash[:notice] = Alchemy.t(flash_notice)
+          do_redirect_to redirect_url
         else
-          respond_to do |format|
-            format.js   { render_remote_errors(object) }
-            format.html { render :action => (params[:action] == "update" ? :edit : :new) }
-          end
+          render action: (params[:action] == 'update' ? 'edit' : 'new')
         end
-      end
-
-      # Renders an unordered list of objects errors in an errors div via javascript.
-      #
-      # Note: You have to have a hidden div with the id +#errors+ in your form, to make this work.
-      #
-      # You can pass a div id as second argument to display the errors in alternative div.
-      #
-      # Hint: If you use an alternative div, please use the +errors+ css class to get the correct styling.
-      #
-      # @param object [ActiveRecord::Base]
-      # @param error_div_id [String]
-      #
-      def render_remote_errors(object, error_div_id = nil)
-        @error_div_id = error_div_id || '#errors'
-        @error_fields = object.errors.messages.keys.map { |f| "#{object.class.model_name.demodulize.underscore}_#{f}" }
-        @errors = ("<ul>" + object.errors.full_messages.map { |e| "<li>#{e}</li>" }.join + "</ul>").html_safe
-        render :action => :remote_errors
       end
 
       def per_page_value_for_screen_size
         return 25 if session[:screen_size].blank?
         screen_height = session[:screen_size].split('x').last.to_i
         (screen_height / 30) - 10
+      end
+
+      # Does redirects for html and js requests
+      #
+      def do_redirect_to(url_or_path)
+        respond_to do |format|
+          format.js   {
+            @redirect_url = url_or_path
+            render :redirect
+          }
+          format.html { redirect_to url_or_path }
+        end
       end
 
       # Extracts options from params.
@@ -151,6 +151,33 @@ module Alchemy
         end.symbolize_keys
       end
 
+      # This method decides if we want to raise an exception or not.
+      #
+      # I.e. in test environment.
+      #
+      def raise_exception?
+        Rails.env.test? || is_page_preview?
+      end
+
+      # Are we currently in the page edit mode page preview.
+      def is_page_preview?
+        controller_path == 'alchemy/admin/pages' && action_name == 'show'
+      end
+
+      def load_locked_pages
+        @locked_pages = Page.locked_by(current_alchemy_user).order(:locked_at)
+      end
+
+      # Returns the current site for admin controllers.
+      #
+      def current_alchemy_site
+        @current_alchemy_site ||= begin
+          site_id = params[:site_id] || session[:alchemy_site_id]
+          site = Site.find_by(id: site_id) || super
+          session[:alchemy_site_id] = site.id
+          site
+        end
+      end
     end
   end
 end

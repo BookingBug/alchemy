@@ -1,1 +1,3 @@
-<%= _t(content.ingredient) %>
+<%- cache(content) do -%>
+<%= Alchemy.t(content.ingredient) -%>
+<%- end -%>

@@ -1,0 +1,93 @@
+%rounded-border {
+  @include border-radius($default-border-radius);
+}
+
+%text-overflow {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  -ms-text-overflow: ellipsis;
+  -moz-text-overflow: ellipsis;
+}
+
+%tooltip {
+  display: none;
+  background: $light_yellow;
+  @extend %rounded-border;
+  @include box-shadow(0 4px 24px $dark-gray);
+  position: absolute;
+  right: -25px;
+  top: 26px;
+  z-index: 100;
+  padding: 8px;
+  line-height: 1.5em;
+  min-width: 180px;
+  font-size: 12px;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 24px;
+    width: 0px;
+    height: 0px;
+    border-style: solid;
+    border-width: 0 8px 8px 8px;
+    border-color: transparent transparent $light_yellow transparent;
+  }
+}
+
+%thumbnail-background {
+  display: table-cell;
+  background-color: $dark-gray;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0;
+  line-height: 0;
+}
+
+%field-with-error {
+  border-color: $error_border_color;
+  color: $error_text_color;
+  background-color: lighten($error_background_color, 8%);
+  @include box-shadow(inset 1px 1px 4px rgba($error_border_color, 0.5));
+}
+
+%blue-focus-style {
+  @include default-focus-style;
+}
+
+%default-input-style {
+  @include box-sizing(border-box);
+  $border-inset-color: lighten($default-border-color, 20%);
+  @extend %rounded-border;
+  @include box-shadow(inset 0px 1px 1px $medium-gray);
+  font: $default-font-style;
+  padding: 1px 2*$default-padding;
+  margin: $default-form-field-margin;
+  background: rgba(#fff, 0.9);
+  border-top: 1px solid $default-border-color;
+  border-left: 1px solid $default-border-color;
+  border-bottom: 1px solid $border-inset-color;
+  border-right: 1px solid $border-inset-color;
+  width: 100%;
+  font-size: 12px;
+  line-height: 12px;
+  height: 29px;
+  @include transition(
+    box-shadow 0.25s ease-in-out,
+    background-color 0.25s ease-in-out,
+    border 0.25s ease-in-out
+  );
+
+  &:focus {
+    @extend %blue-focus-style;
+  }
+}
+
+%gradiated-toolbar {
+  background: $medium-gray;
+  padding: 8px 4px;
+  height: 29px;
+}

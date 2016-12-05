@@ -1,72 +1,73 @@
 <div id="image_assign_filter_and_image_sizing">
-  <div class="button_with_label">
-    <%= link_to(
-      render_icon('zoom-out'),
-      alchemy.admin_pictures_path({
-        size: "small",
-        content_id: @content,
-        element_id: @element,
-        swap: @swap,
-        query: params[:query],
-        options: @options.to_json
-      }),
-      remote: true,
-      title: _t(:small_thumbnails),
-      class: "icon_button"
-    ) %>
-    <%= link_to(
-      render_icon('zoom-equal'),
-      alchemy.admin_pictures_path({
-        size: "medium",
-        content_id: @content,
-        element_id: @element,
-        swap: @swap,
-        query: params[:query],
-        options: @options.to_json
-      }),
-      remote: true,
-      title: _t(:medium_thumbnails),
-      class: "icon_button"
-    ) %>
-    <%= link_to(
-      render_icon('zoom-in'),
-      alchemy.admin_pictures_path({
-        size: "large",
-        content_id: @content,
-        element_id: @element,
-        swap: @swap,
-        query: params[:query],
-        options: @options.to_json
-      }),
-      remote: true,
-      title: _t(:big_thumbnails),
-      class: "icon_button"
-    ) %>
-    <label><%= _t('Image size') %></label>
+  <% if can? :create, Alchemy::Picture %>
+    <%= render 'alchemy/admin/uploader/button',
+      model_class: Alchemy::Picture,
+      dropzone: '#assign_image_list',
+      file_attribute: 'image_file',
+      in_dialog: true,
+      redirect_url: alchemy.admin_pictures_path(
+        size: params[:size],
+        filter: 'last_upload',
+        content_id: @content.try(:id),
+        element_id: @element.try(:id),
+        options: @options
+      ) %>
+    <div class="toolbar_spacer"></div>
+  <% end %>
+  <div class="button_group">
+    <div class="button_with_label">
+      <%= link_to(
+        render_icon('zoom-out'),
+        alchemy.admin_pictures_path({
+          size: "small",
+          content_id: @content,
+          element_id: @element,
+          q: params[:q],
+          options: @options.to_json,
+          filter: params[:filter],
+          tagged_with: params[:tagged_with]
+        }),
+        remote: true,
+        title: Alchemy.t(:small_thumbnails),
+        class: "icon_button"
+      ) %>
+    </div>
+    <div class="button_with_label">
+      <%= link_to(
+        render_icon('zoom-equal'),
+        alchemy.admin_pictures_path({
+          size: "medium",
+          content_id: @content,
+          element_id: @element,
+          q: params[:q],
+          options: @options.to_json,
+          filter: params[:filter],
+          tagged_with: params[:tagged_with]
+        }),
+        remote: true,
+        title: Alchemy.t(:medium_thumbnails),
+        class: "icon_button"
+      ) %>
+    </div>
+    <div class="button_with_label">
+      <%= link_to(
+        render_icon('zoom-in'),
+        alchemy.admin_pictures_path({
+          size: "large",
+          content_id: @content,
+          element_id: @element,
+          q: params[:q],
+          options: @options.to_json,
+          filter: params[:filter],
+          tagged_with: params[:tagged_with]
+        }),
+        remote: true,
+        title: Alchemy.t(:big_thumbnails),
+        class: "icon_button"
+      ) %>
+    </div>
+    <label><%= Alchemy.t('Image size') %></label>
     <%= hidden_field_tag('size', @size, id: 'overlay_thumbnails_size') %>
-  </div>
-  <div class="toolbar_spacer"></div>
-  <div class="button_with_label">
-    <%= link_to_overlay_window(
-      render_icon('upload'),
-      alchemy.new_admin_picture_path(
-        element_id: @element.blank? ? nil : @element.id,
-        content_id: @content.blank? ? nil : @content.id,
-        swap: @swap,
-        page: params[:page],
-        size: @size,
-        options: @options.to_json
-      ),
-      {
-        size: "540x550",
-        title: _t(:upload_image)
-      },
-      {
-        class: 'icon_button',
-        title: _t(:upload_image)
-      }
-    ) %>
-    <label><%= _t(:upload_image) %></label>
   </div>
   <%= render partial: 'alchemy/admin/partials/remote_search_form' %>
 </div>

@@ -1,9 +1,7 @@
 # This rails template installs Alchemy and all depending gems.
-require File.expand_path('../../../alchemy/version', __FILE__)
+require File.expand_path("../../../alchemy/version", __FILE__)
 
-gem 'alchemy_cms', "~> #{Alchemy::VERSION}"
-gem 'alchemy-devise', github: 'magiclabs/alchemy-devise', branch: '1.1-stable'
+gem "alchemy_cms",    github: "AlchemyCMS/alchemy_cms",    branch: "master"
+gem "alchemy-devise", github: "AlchemyCMS/alchemy-devise", branch: "master"
 
-if yes?("\nDo you want to use Capistrano for deployment? (y/N)")
-  gem 'capistrano', group: 'development'
-end
+gem "capistrano-alchemy", github: "AlchemyCMS/capistrano-alchemy", branch: "master", group: "development"

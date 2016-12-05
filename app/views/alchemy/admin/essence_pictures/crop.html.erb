@@ -5,7 +5,7 @@
   <% end %>
 <% else %>
   <%= render_message do %>
-    <%= simple_format _t(:explain_cropping) %>
+    <%= simple_format Alchemy.t(:explain_cropping) %>
   <% end %>
   <div class="thumbnail_background">
     <%= image_tag(
@@ -22,9 +22,9 @@
     <%= f.hidden_field :crop_from %>
     <%= f.hidden_field :crop_size %>
     <%= hidden_field_tag :content_id, @content.id %>
-    <%= f.button "#{render_icon(:true)} #{_t(:apply)}".html_safe, class: 'with_icon' %>
-    <%= link_to _t('Reset Imagemask'), '#', {
-      onclick: 'Alchemy.ImageCropper.reset()',
+    <%= f.button "#{render_icon(:true)} #{Alchemy.t(:apply)}".html_safe, class: 'with_icon' %>
+    <%= link_to Alchemy.t('Reset Imagemask'), '#', {
+      onclick: 'Alchemy.ImageCropper.reset(); return false',
       class: 'reset_mask'
     } %>
   <% end %>
@@ -35,12 +35,15 @@
   Alchemy.ImageLoader('#jscropper .thumbnail_background');
   $('#imageToCrop').load(function() {
     Alchemy.ImageCropper.init(
-      [<%= @initial_box[:x1] %>, <%= @initial_box[:y1] %>, <%= @initial_box[:x2] %>, <%= @initial_box[:y2] %>],
-      <%= @size_x %>,
-      <%= @size_y %>,
-      [<%= @default_box[:x1] %>, <%= @default_box[:y1] %>, <%= @default_box[:x2] %>, <%= @default_box[:y2] %>],
+       <%= @initial_box.values.to_json %>,
+      <% if @essence_picture.can_be_cropped_to("#{@min_size[:width]}x#{@min_size[:height]}") %>
+        <%= @min_size.values.to_json %>,
+      <% else %>
+        <%= false %>,
+      <% end %>
+      <%= @default_box.values.to_json %>,
       <%= @ratio %>,
-      [<%= @picture.image_file_width %>, <%= @picture.image_file_height %>]
+      <%= @picture.image_size.values.to_json %>
     );
   });
 </script>

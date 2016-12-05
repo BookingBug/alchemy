@@ -1,29 +1,26 @@
-<% any_tags = Alchemy::Attachment.tag_counts.any? %>
-<%= toolbar(
-  buttons: [
-    {
-      icon: 'upload',
-      url: alchemy.new_admin_attachment_path,
-      hotkey: 'alt-n',
-      overlay_options: {
-        title: _t(:upload_file),
-        size: '540x550'
-      },
-      title: _t(:upload_file),
-      class: 'icon_button',
-      label: _t(:upload_file),
-      if_permitted_to: [:new, :alchemy_admin_attachments]
-    }
-  ]
-) %>
-<div id="archive_all" class="<%= any_tags ? 'with_tag_filter' : nil %>">
-  <%= resources_header %>
-  <%= render partial: 'files_list' %>
-  <% if any_tags %>
-  <div id="library_sidebar">
-    <div id="tag_list" class="<%= params[:tagged_with].present? ? 'filtered' : '' %>">
-      <%= render partial: 'tag_list' %>
-    </div>
+<% content_for(:toolbar) do %>
+  <div class="toolbar_buttons">
+    <% if can? :create, Alchemy::Attachment %>
+      <%= render 'alchemy/admin/uploader/button',
+        redirect_url: alchemy.admin_attachments_path,
+        model_class: Alchemy::Attachment,
+        file_attribute: 'file' %>
+    <% end %>
   </div>
-  <% end %>
+  <%= render 'alchemy/admin/partials/search_form' %>
+<% end %>
+
+<div id="archive_all" class="with_tag_filter resources-table-wrapper">
+  <%= resources_header %>
+  <%= render 'files_list' %>
+
+  <div id="library_sidebar">
+    <%= render 'filter_bar' %>
+
+    <% if Alchemy::Attachment.tag_counts.any? %>
+      <div class="<%= params[:tagged_with].present? ? 'tag-list filtered' : 'tag-list' %>">
+        <%= render 'tag_list' %>
+      </div>
+    <% end %>
+  </div>
 </div>

@@ -1,19 +1,19 @@
 module Alchemy
   module Admin
     class ContentsController < Alchemy::Admin::BaseController
+      helper 'alchemy/admin/essences'
 
-      helper "alchemy/admin/essences"
+      authorize_resource class: Alchemy::Content
 
       def new
         @element = Element.find(params[:element_id])
-        @contents = @element.available_contents
+        @options = options_from_params
         @content = @element.contents.build
-        render layout: !request.xhr?
       end
 
       def create
         @element = Element.find(params[:content][:element_id])
-        @content = Content.create_from_scratch(@element, params[:content])
+        @content = Content.create_from_scratch(@element, content_params)
         @options = options_from_params
         @html_options = params[:html_options] || {}
         if picture_gallery_editor?
@@ -27,26 +27,31 @@ module Alchemy
       end
 
       def update
-        content = Content.find(params[:id])
-        content.essence.update_attributes(params[:content])
+        @content = Content.find(params[:id])
+        @content.update_essence(content_params)
       end
 
       def order
-        params[:content_ids].each do |id|
-          content = Content.find(id)
-          content.move_to_bottom
+        Content.transaction do
+          params[:content_ids].each_with_index do |id, idx|
+            Content.where(id: id).update_all(position: idx + 1)
+          end
         end
-        @notice = _t("Successfully saved content position")
+        @notice = Alchemy.t("Successfully saved content position")
       end
 
       def destroy
         @content = Content.find(params[:id])
-        @content_dup = @content.clone
-        @notice = _t("Successfully deleted content", :content => @content.name_for_label)
+        @content_dom_id = @content.dom_id
+        @notice = Alchemy.t("Successfully deleted content", content: @content.name_for_label)
         @content.destroy
       end
 
       private
+
+      def content_params
+        params.require(:content).permit(:element_id, :name, :ingredient, :essence_type)
+      end
 
       def picture_gallery_editor?
         params[:content][:essence_type] == 'Alchemy::EssencePicture' && @options[:grouped] == 'true'
@@ -65,7 +70,6 @@ module Alchemy
           html_options: @html_options.symbolize_keys
         }
       end
-
     end
   end
 end

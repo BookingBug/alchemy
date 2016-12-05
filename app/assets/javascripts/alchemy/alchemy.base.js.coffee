@@ -24,60 +24,57 @@ $.extend Alchemy,
     $("a#edit_multiple_pictures").on "click", (e) ->
       $this = $(this)
       picture_ids = $("input:checkbox", "#picture_archive").serialize()
-      e.preventDefault()
-      Alchemy.openWindow $this.attr("href") + "?" + picture_ids, {title: $this.attr("title"), height: 230, overflow: false}
+      url = $this.attr("href") + "?" + picture_ids
+      Alchemy.openDialog url, {title: $this.attr("title"), size: '400x295'}
       false
     return
 
   # To show the "Please wait" overlay.
   # Pass false to hide it.
   pleaseWaitOverlay: (show = true) ->
-    $overlay = $("#overlay")
-    spinner = Alchemy.Spinner.medium()
+    $overlay = $('#overlay')
     if show
-      spinner.spin($("#overlay")[0])
-      $overlay.css "visibility", "visible"
+      spinner = Alchemy.Spinner.medium()
+      $overlay.append(spinner.spin().el)
+      $overlay.show()
     else
-      spinner.stop()
-      $overlay.css "visibility", "hidden"
+      $overlay.find('.spinner').remove()
+      $overlay.hide()
     return
 
   # Shows spinner while loading images and
   # fades the image after its been loaded
   ImageLoader: (scope = document, options = {color: '#fff'}) ->
     $('img', scope).each ->
-      image = $(this).hide()
-      parent = image.parent()
-      spinner = Alchemy.Spinner.small options
-      spinner.spin parent[0]
-      image.on 'load', ->
-        image.fadeIn 600
-        spinner.stop()
-      image.on 'error', ->
-        spinner.stop()
-        image.parent().html('<span class="icon warn"/>')
+      if !this.complete
+        image = $(this).hide()
+        $parent = image.parent()
+        spinner = Alchemy.Spinner.small options
+        spinner.spin $parent[0]
+        image.on 'load', ->
+          spinner.stop()
+          image.fadeIn 400
+        image.on 'error', ->
+          spinner.stop()
+          $parent.html('<span class="icon warn"/>')
 
+  # Removes the picture from essence picture thumbnail
   removePicture: (selector) ->
     $form_field = $(selector)
-    $element = $form_field.parents(".element_editor")
+    $element = $form_field.closest(".element-editor")
     if $form_field
       $form_field.val ""
       $form_field.prev().remove()
       $form_field.parent().addClass "missing"
       Alchemy.setElementDirty $element
-    return
-
-  # Sets the element to saved state
-  setElementSaved: (selector) ->
-    $element = $(selector)
-    Alchemy.setElementClean selector
-    Alchemy.Buttons.enable $element
-    return true
+    false
 
   # Initializes all select tag with .alchemy_selectbox class as selectBoxIt instance
   # Pass a jQuery scope to only init a subset of selectboxes.
   SelectBox: (scope) ->
-    $("select.alchemy_selectbox", scope).selectBoxIt()
+    $("select.alchemy_selectbox", scope).select2
+      minimumResultsForSearch: 7
+      dropdownAutoWidth: true
     return
 
   Buttons: (options) ->
@@ -87,18 +84,23 @@ $.extend Alchemy,
   # Selects cell tab for given name.
   # Creates it if it's not present yet.
   selectOrCreateCellTab: (cell_name, label) ->
-    if $("#cell_" + cell_name).size() is 0
-      $("#cells").tabs "add", "#cell_" + cell_name, label
-      $("#cell_" + cell_name).addClass "sortable_cell"
-    $("#cells").tabs "select", "cell_" + cell_name
+    $cells = $('#cells')
+    $tab = $("#cell_#{cell_name}")
+    if $tab.length == 0
+      $("<li><a href=\"#cell_#{cell_name}\">#{label}</a></li>")
+        .appendTo('#cells .ui-tabs-nav')
+      $tab = $("<div id=\"cell_#{cell_name}\" class=\"sortable_cell\"/>")
+      $cells.append($tab)
+      $cells.tabs().tabs('refresh')
+    $cells.tabs().tabs('option', 'active', $('#cells > div').index($tab))
     return
 
   # Inits the cell tabs
   buildTabbedCells: (label) ->
-    $cells = $("<div id=\"cells\"/>")
-    $("#cell_for_other_elements").wrap $cells
-    $("#cells").prepend "<ul><li><a href=\"#cell_for_other_elements\">" + label + "</a></li></ul>"
-    $("#cells").tabs().tabs "paging",
+    $cells = $('<div id="cells"/>')
+    $('#cell_for_other_elements').wrap($cells)
+    $('#cells').prepend("<ul><li><a href=\"#cell_for_other_elements\">#{label}</a></li></ul>")
+    .tabs 'paging',
       follow: true
       followOnSelect: true
     return
@@ -110,14 +112,11 @@ $.extend Alchemy,
       console.trace()
     return
 
-  # Translates given string
-  #
-  _t: (id) ->
-    translation = Alchemy.translations[id]
-    if (translation)
-      translation[Alchemy.locale]
-    else
-      id
+  # Logs errors to js console, if present.
+  log_error: (e) ->
+    if window["console"]
+      console.error e
+    return
 
   getUrlParam: (name) ->
     results = new RegExp("[\\?&]" + name + "=([^&#]*)").exec(window.location.href)

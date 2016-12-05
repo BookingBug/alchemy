@@ -1,0 +1,25 @@
+<div class="element-header">
+  <span class="element-handle">
+    <%= render_icon(:element) %>
+    <% if element.definition.blank? %>
+    <span class="warning icon" title="<%= Alchemy.t(:element_definition_missing) %>"></span>
+    <% else %>
+    <%= render_icon("element_#{element.public? ? 'public' : 'draft'}") %>
+    <% end %>
+  </span>
+  <span class="element-title">
+    <span class="preview_text_element_name"><%= element.display_name %></span>
+    <span class="preview_text_quote">
+      <%= sanitize(element.preview_text.presence || '&nbsp;') %>
+    </span>
+  </span>
+  <%= render_hint_for(element) unless element.trashed? %>
+  <span class="ajax-folder" <%= element.trashed? ? 'style="display: none"'.html_safe : '' %>>
+    <%= link_to '', '#', {
+      'data-element-toggle' => element.id,
+      class: element.folded? ? 'expand_element' : 'fold_element',
+      title: element.folded? ? Alchemy.t(:show_element_content) : Alchemy.t(:hide_element_content),
+      id: "element_#{element.id}_folder"
+    } %>
+  </span>
+</div>

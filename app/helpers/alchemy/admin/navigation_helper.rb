@@ -1,10 +1,8 @@
 module Alchemy
   module Admin
-
     # This module contains helper methods for rendering the admin navigation.
     #
     module NavigationHelper
-
       # Renders one admin main navigation entry
       #
       # @param [Hash] alchemy_module
@@ -33,10 +31,25 @@ module Alchemy
 
       # Used for checking the main navi permissions
       #
+      # To let your module be navigatable by the user you have to provide an Ability for it.
+      #
+      # === Example:
+      #
+      #   # module.yml
+      #   name: 'my_module'
+      #   navigation: {
+      #     controller: 'my/admin/posts'
+      #     action: 'index'
+      #   }
+      #
+      #   # ability.rb
+      #   can :index, :my_admin_posts
+      #
       def navigate_module(navigation)
+        navigation.stringify_keys!
         [
           navigation['action'].to_sym,
-          navigation['controller'].gsub(/^\//, '').gsub(/\//, '_').to_sym
+          navigation['controller'].to_s.gsub(/\A\//, '').gsub(/\//, '_').to_sym
         ]
       end
 
@@ -95,6 +108,23 @@ module Alchemy
         )
       end
 
+      # Alchemy modules for main navigation.
+      #
+      # Sorted by position attribute, if given.
+      #
+      def sorted_alchemy_modules
+        sorted = []
+        not_sorted = []
+        alchemy_modules.map do |m|
+          if m['position'].blank?
+            not_sorted << m
+          else
+            sorted << m
+          end
+        end
+        sorted.sort_by { |m| m['position'] } + not_sorted
+      end
+
       private
 
       # Calls +url_for+ helper on engine if present or on host app.
@@ -131,8 +161,9 @@ module Alchemy
         {
           controller: entry['controller'],
           action: entry['action'],
-          only_path: true
-        }
+          only_path: true,
+          params: entry['params']
+        }.delete_if { |_k, v| v.nil? }
       end
 
       # Retrieves the current Alchemy module from controller and index action.
@@ -170,17 +201,17 @@ module Alchemy
       def admin_mainnavi_active?(main_navigation)
         main_navigation.stringify_keys!
         # Has the given navigation entry a active sub navigation?
-        has_active_entry?(module_sub_navigation(main_navigation)) or
+        has_active_entry?(module_sub_navigation(main_navigation)) ||
           # Has the given navigation entry a active nested navigation?
-          has_active_entry?(module_nested_navigation(main_navigation)) or
-            # Is the navigation entry active?
-            entry_active?(main_navigation)
+          has_active_entry?(module_nested_navigation(main_navigation)) ||
+          # Is the navigation entry active?
+          entry_active?(main_navigation)
       end
 
       # Returns true if the given entry's controller is current controller
       #
       def is_entry_controller_active?(entry)
-        entry['controller'].gsub(/^\//, '') == params[:controller]
+        entry['controller'].gsub(/\A\//, '') == params[:controller]
       end
 
       # Returns true if the given entry's action is current controllers action
@@ -199,7 +230,6 @@ module Alchemy
       def has_active_entry?(entries)
         !entries.detect { |entry| entry_active?(entry) }.nil?
       end
-
     end
   end
 end

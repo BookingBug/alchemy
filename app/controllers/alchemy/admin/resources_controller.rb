@@ -1,33 +1,38 @@
 require 'csv'
 require 'alchemy/resource'
 require 'alchemy/resources_helper'
-require 'handles_sortable_columns'
 
 module Alchemy
   module Admin
     class ResourcesController < Alchemy::Admin::BaseController
       include Alchemy::ResourcesHelper
-      helper Alchemy::ResourcesHelper
+
+      helper Alchemy::ResourcesHelper, TagsHelper
       helper_method :resource_handler
 
-      before_filter :load_resource, :only => [:show, :edit, :update, :destroy]
+      before_filter :load_resource,
+        only: [:show, :edit, :update, :destroy]
 
-      handles_sortable_columns do |c|
-        c.default_sort_value = :name
-        c.link_class = 'sortable'
-        c.indicator_class = {:asc => "sorted asc", :desc => "sorted desc"}
-        c.indicator_text = {:asc => "<i>&nbsp;&darr;&nbsp;</i>", :desc => "<i>&nbsp;&uarr;&nbsp;</i>"}
+      before_filter do
+        authorize!(action_name.to_sym, resource_instance_variable || resource_handler.model)
       end
 
       def index
-        items = resource_handler.model
+        @query = resource_handler.model.ransack(params[:q])
+        items = @query.result
+
         if contains_relations?
           items = items.includes(*resource_relations_names)
         end
-        if params[:query].present?
-          items = query_items(items)
+
+        if params[:tagged_with].present?
+          items = items.tagged_with(params[:tagged_with])
         end
-        items = items.order(sort_order)
+
+        if params[:filter].present?
+          items = items.public_send(sanitized_filter_params)
+        end
+
         respond_to do |format|
           format.html {
             items = items.page(params[:page] || 1).per(per_page_value_for_screen_size)
@@ -41,32 +46,29 @@ module Alchemy
 
       def new
         instance_variable_set("@#{resource_handler.resource_name}", resource_handler.model.new)
-        render :layout => !request.xhr?
       end
 
       def show
-        render action: 'edit', layout: !request.xhr?
+        render action: 'edit'
       end
 
-      def edit
-        render :layout => !request.xhr?
-      end
+      def edit; end
 
       def create
-        instance_variable_set("@#{resource_handler.resource_name}", resource_handler.model.new(params[resource_handler.namespaced_resource_name.to_sym]))
+        instance_variable_set("@#{resource_handler.resource_name}", resource_handler.model.new(resource_params))
         resource_instance_variable.save
         render_errors_or_redirect(
           resource_instance_variable,
-          resources_path,
+          resources_path(resource_handler.namespaced_resources_name, current_location_params),
           flash_notice_for_resource_action
         )
       end
 
       def update
-        resource_instance_variable.update_attributes(params[resource_handler.namespaced_resource_name.to_sym])
+        resource_instance_variable.update_attributes(resource_params)
         render_errors_or_redirect(
           resource_instance_variable,
-          resources_path,
+          resources_path(resource_handler.namespaced_resources_name, current_location_params),
           flash_notice_for_resource_action
         )
       end
@@ -74,13 +76,14 @@ module Alchemy
       def destroy
         resource_instance_variable.destroy
         flash_notice_for_resource_action
+        do_redirect_to resource_url_proxy.url_for(current_location_params.merge(action: 'index'))
       end
 
       def resource_handler
         @_resource_handler ||= Alchemy::Resource.new(controller_path, alchemy_module)
       end
 
-    protected
+      protected
 
       # Returns a translated +flash[:notice]+.
       # The key should look like "Modelname successfully created|updated|destroyed."
@@ -94,76 +97,38 @@ module Alchemy
         when :destroy
           verb = "removed"
         end
-        flash[:notice] = _t("#{resource_handler.resource_name.classify} successfully #{verb}", :default => _t("Succesfully #{verb}"))
+        flash[:notice] = Alchemy.t("#{resource_handler.resource_name.classify} successfully #{verb}", default: Alchemy.t("Succesfully #{verb}"))
       end
 
       def is_alchemy_module?
-        not alchemy_module.nil? and not alchemy_module['engine_name'].nil?
+        !alchemy_module.nil? && !alchemy_module['engine_name'].nil?
       end
 
       def alchemy_module
-        @alchemy_module ||= module_definition_for(:controller => params[:controller], :action => 'index')
+        @alchemy_module ||= module_definition_for(controller: params[:controller], action: 'index')
       end
 
       def load_resource
         instance_variable_set("@#{resource_handler.resource_name}", resource_handler.model.find(params[:id]))
       end
 
-      # Returns a sort order for AR#sort method
+      # Permits all parameters as default!
       #
-      # Falls back to fallback_sort_order, if the requested column is not a column of model.
+      # THIS IS INSECURE! Although only signed in admin users can send requests anyway, but we should change this.
       #
-      # If the column is a tablename and column combination that matches any resource relations, than this order will be taken.
+      # Please define this method in your inheriting controller and set the parameters you want to permit.
       #
-      def sort_order
-        sortable_column_order do |column, direction|
-          if resource_handler.model_associations.present? && column.match(/\./)
-            table, column = column.split('.')
-            if resource_handler.model_associations.detect { |a| a.table_name == table }
-              "#{table}.#{column} #{direction}"
-            else
-              fallback_sort_order(direction)
-            end
-          elsif resource_handler.model.column_names.include?(column.to_s)
-            "#{resource_handler.model.table_name}.#{column} #{direction}"
-          else
-            fallback_sort_order(direction)
-          end
-        end
+      # TODO: Hook this into authorization provider.
+      #
+      def resource_params
+        params.require(resource_handler.namespaced_resource_name).permit!
       end
 
-      # Default sort order fallback
-      #
-      # Overwrite this in your controller to define custom fallback
-      #
-      def fallback_sort_order(direction)
-        "#{resource_handler.model.table_name}.id #{direction}"
+      def sanitized_filter_params
+        resource_model.alchemy_resource_filters.detect do |filter|
+          filter == params[:filter]
+        end || :all
       end
-
-      # Returns an activerecord object that contains items matching params[:query]
-      #
-      def query_items(items)
-        query = params[:query].downcase.split(' ').join('%')
-        query = ActiveRecord::Base.sanitize("%#{query}%")
-        items.where(search_query(query))
-      end
-
-      # Returns a search query string
-      #
-      # It queries all searchable attributes from resource model via LIKE and joins them via OR.
-      #
-      # If the attribute is a relation it builds the query for the associated table.
-      #
-      def search_query(search_terms)
-        resource_handler.searchable_attributes.map do |attribute|
-          if relation = attribute[:relation]
-            "LOWER(#{relation[:model_association].klass.table_name}.#{relation[:attr_method]}) LIKE #{search_terms}"
-          else
-            "LOWER(#{resource_handler.model.table_name}.#{attribute[:name]}) LIKE #{search_terms}"
-          end
-        end.join(" OR ")
-      end
-
     end
   end
 end

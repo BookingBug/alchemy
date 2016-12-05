@@ -1,5 +1,11 @@
 html {
   height: 100%;
+
+  &.turbolinks-progress-bar::before {
+    background-color: $blue !important;
+    height: 3px !important;
+    z-index: 400001;
+  }
 }
 
 noscript {
@@ -10,9 +16,9 @@ noscript {
   width: 100%;
   text-align: center;
   line-height: 1em;
-  border-bottom: 1px solid #c4c19c;
-  color: #726d23;
-  background-color: #f3f0c1;
+  border-bottom: 1px solid $warning_border_color;
+  color: $warning_text_color;
+  background-color: $warning_background_color;
 
   h1, p {
     margin: 16px 0;
@@ -30,13 +36,28 @@ body {
 
   // Fix for strange element window offset
   &.pages.edit { overflow: hidden }
+
+  &.prevent-scrolling {
+    overflow: hidden;
+  }
 }
 
 h1 {
-  margin: 8px;
   padding: 0;
+  margin: 8px;
   font-weight: bold;
   font-size: $default-font-size;
+
+  &.resources-header {
+    position: fixed;
+    width: 100%;
+    top: 75px;
+    left: 74px;
+    z-index: 2;
+    margin: 0 -8px;
+    padding: 16px;
+    background-color: $light-gray;
+  }
 }
 
 h2 {
@@ -68,7 +89,7 @@ a {
   }
 
   &:focus {
-    @extend %white-focus-style;
+    @extend %blue-focus-style;
     color: black;
   }
 
@@ -97,15 +118,56 @@ hr {
   @include opacity(0.5);
 }
 
-.float_right {
-  float: right;
+.float_right { float: right }
+
+.float_left { float: left }
+
+.center {
+  text-align: center;
+
+  .spinner {
+    display: inline-block;
+    vertical-align: middle;
+  }
 }
 
-.float_left {
-  float: left;
+kbd {
+  font-family: Courier, monospaced;
+  background: $medium-gray;
+  border: $default-border;
+  padding: 0.25em 0.5em;
+  vertical-align: top;
+  margin-right: 1ex;
+  @extend %rounded-border;
 }
 
-.center { text-align: center }
+.top-rounded-border {
+  @include border-top-radius($default-border-radius);
+}
+
+.left-rounded-border {
+  @include border-left-radius($default-border-radius);
+}
+
+.right-rounded-border {
+  @include border-right-radius($default-border-radius);
+}
+
+.bottom-rounded-border {
+  @include border-bottom-radius($default-border-radius);
+}
+
+.bottom-left-rounded-border {
+  @include border-bottom-left-radius($default-border-radius);
+}
+
+.disable-user-select {
+  @include user-select(none);
+}
+
+.border-box-sizing {
+  @include box-sizing(border-box);
+}
 
 span.updated_at {
   float: right;
@@ -167,10 +229,6 @@ div#page {
   margin-right: 8px;
 }
 
-#page_names textarea {
-  height: 67px;
-}
-
 div#new_page_from_clipboard {
   display: none;
 }
@@ -182,11 +240,6 @@ div#new_page_from_clipboard input.button {
 div#new_page_from_clipboard span {
   float: left;
   line-height: 25px;
-}
-
-#page_editing_head .site_status {
-  margin: 0 4px 0 0;
-  float: left;
 }
 
 div#page_status_options {
@@ -201,52 +254,6 @@ div#page_editing_menu {
 
 #page_sorting_panel p {
   margin-top: 1em;
-}
-
-div.table_right span.tools a.icon_button img {
-  left: -1px;
-}
-
-li.even {
-  background-color: #fff;
-}
-
-li.odd {
-  background-color: #eaf3f9;
-}
-
-ul.list {
-  margin: 0;
-  padding: 0;
-  list-style-type: none;
-}
-
-ul#layoutpages.list {
-  margin-top: 16px;
-}
-
-ul#layoutpages.list li {
-  margin-left: 8px;
-}
-
-ul#sitemap.list {
-  padding: 0 0 104px 0;
-}
-
-ul.list li {
-  list-style-type: none;
-  border-width: 0;
-  border-style: none;
-  display: block;
-}
-
-ul.list li.legend {
-  background-color: transparent;
-  font-weight: bold;
-}
-
-ul.list span.right {
-  float: right;
 }
 
 .handle {
@@ -346,29 +353,14 @@ div.all_rights {
   margin: 2*$default-padding;
 }
 
-div.element_head span.ajax_folder span.error_icon {
-  float: left;
-  width: 14px;
-  height: 15px;
-  text-align: center;
-  background-color: white;
-  border: 1px solid #935b5b;
-  color: #935b5b;
-}
-
 div#images {
   margin-top: 16px;
   margin-bottom: 8px;
   overflow: visible;
 }
 
-p.foot_note {
-  font-size: 10px;
-  line-height: 1.5em;
-  padding: $default-padding;
-  background-color: $light_yellow;
-  border: 1px solid $medium-gray;
-  @extend .rounded-border;
+.foot_note, form .input .hint {
+  @include form-hint;
 }
 
 #all_files td.name a {
@@ -384,57 +376,6 @@ p.foot_note {
   margin-left: 22px;
 }
 
-#alchemy .ui-dialog div#jscropper {
-  padding: 2 * $default-padding;
-
-  .thumbnail_background {
-    @extend %thumbnail-background;
-    width: 800px;
-    height: 600px;
-    position: relative;
-  }
-
-  .info.message {
-    float: right;
-    width: 134px;
-    margin-left: 8px;
-    padding: 0 8px 0 32px;
-  }
-
-  .jcrop-holder { @include inline-block }
-
-  img {
-    width: auto;
-    max-height: 600px;
-  }
-
-  form {
-    padding: 0;
-    position: absolute;
-    bottom: 2 * $default-padding;
-    right: 2 * $default-padding;
-    width: 176px;
-    margin-left: 8px;
-
-    .reset_mask, button {
-      display: block;
-      margin-bottom: 0;
-      text-align: center;
-    }
-    .reset_mask { padding-top: 4px }
-    button { width: 100% }
-  }
-}
-
-textarea#essence_picture_caption {
-  width: 233px;
-  height: 61px;
-}
-
-#alchemy .ui-dialog-content form.with_padding table td {
-  vertical-align: top;
-}
-
 #page_selector_scroll_container {
   position: relative;
   width: 100%;
@@ -447,7 +388,7 @@ textarea#essence_picture_caption {
   border: 1px inset #e8e8e8;
   overflow: auto;
   padding: 4px 0 0 4px;
-  @extend .rounded-border;
+  @extend %rounded-border;
 }
 
 #alchemyConfirmation .alchemy_window_buttons {
@@ -480,7 +421,7 @@ input.with_border {
   line-height: 19px;
 }
 
-#alchemy .ui-dialog-content a img {
+a img {
   border-style: none;
 }
 
@@ -510,15 +451,6 @@ input#link_to_text {
   float: none;
 }
 
-#alchemy .ui-dialog-content ul#sitemap ul li span.sitemap_sitename.selected_page a {
-  font-weight: bold;
-  padding-left: 4px;
-}
-
-#alchemy .ui-dialog-content ul#sitemap ul li span.sitemap_sitename a:hover {
-  font-weight: bold;
-}
-
 #external_link_table .padding_right {
   padding-right: 8px;
 }
@@ -535,31 +467,6 @@ select#url_protocol.medium {
   margin: 0;
 }
 
-#alchemy .ui-dialog-content td.medium {
-  width: 76px;
-}
-
-#alchemy .ui-dialog .ui-dialog-content .buttons {
-  text-align: right;
-  margin: 0;
-  padding: 0;
-
-  label {
-    float: left;
-    line-height: 36px;
-  }
-}
-
-#alchemy .ui-dialog-content p a.button.small {
-  float: none;
-  @include inline-block;
-  vertical-align: inherit;
-}
-
-#alchemy .ui-dialog #alchemyConfirmation.ui-dialog-content {
-  padding: 2*$default-padding;
-}
-
 #clipboard_items {
 
   ul {
@@ -574,10 +481,19 @@ select#url_protocol.medium {
       padding: 2*$default-padding;
       border: $default-border;
       background-color: white;
-      @extend .rounded-border;
+      @extend %rounded-border;
+
       &.elements {
-        background-color: #E5DCCA;
-        border: 1px solid #BBA589;
+        background-color: $medium-gray;
+      }
+
+      .icon {
+        vertical-align: text-bottom;
+        margin-right: $default-padding;
+      }
+
+      .float_right .icon {
+        margin-right: 0;
       }
     }
   }
@@ -594,27 +510,20 @@ select#url_protocol.medium {
   border-spacing: 0 !important;
 }
 
-#dropbox {
-  background: $medium-gray;
-  border: $default-border;
-  @extend .rounded-border;
-  padding: $default-padding;
-  margin-bottom: 2*$default-padding;
-  text-align: center;
-  line-height: 6em;
-  &.dragover {
-    background: $dark-gray;
-    color: $light-gray;
-    border-color: $light-gray;
-  }
-}
-
 div.browse {
   margin-bottom: 1em;
 }
 
-#alchemyPreviewWindow {
-  width: 100% !important;
+#alchemy_preview_window {
+  @include box-sizing(border-box);
+  position: absolute;
+  left: 66px;
+  top: 73px;
+  width: auto;
+  height: auto;
+  border: 0 none;
+  background: #fff;
+  @include transition(200ms ease-in-out);
 }
 
 #error_trace {
@@ -622,5 +531,20 @@ div.browse {
   width: 80%;
   padding: $default-padding;
   overflow: auto;
-  @extend .rounded-border;
+  @extend %rounded-border;
+}
+
+@-moz-keyframes spin {
+  from { -moz-transform: rotate(0deg); }
+  to   { -moz-transform: rotate(360deg); }
+}
+
+@-webkit-keyframes spin {
+  from { -webkit-transform: rotate(0deg); }
+  to   { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  from {transform:rotate(0deg);}
+  to   {transform:rotate(360deg);}
 }

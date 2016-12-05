@@ -1,0 +1,243 @@
+select {
+  @include button-defaults;
+  height: 29px;
+  padding: 0.4em 0.6em;
+  max-width: 100%;
+}
+
+.select2-container {
+
+  &.alchemy_selectbox {
+
+    text-shadow: #FFF 0px 1px 0px;
+
+    .select2-choice {
+      height: 27px;
+      line-height: 27px;
+      @include sassy-button-gradient('simple', $sb-base-color, $sb-second-color, $sb-text-color, $sb-text-style, $sb-pseudo-states);
+      border-color: $button-border-color;
+      text-align: left;
+      border-radius: $default-border-radius;
+
+      .select2-arrow {
+        top: 2px;
+        width: 20px;
+        height: 23px;
+        line-height: 23px;
+        background: transparent;
+        border-left: 1px solid #CACACA;
+
+        b {
+          @extend .icon-menu;
+          background-image: none;
+
+          &:before {
+            position: relative;
+            top: 5px;
+            left: 1px;
+          }
+        }
+      }
+    }
+
+    &.select2-dropdown-open {
+      .select2-choice .select2-arrow b {
+        background-position: -17px 0px;
+      }
+    }
+
+    &.tiny {
+
+      .select2-choice {
+        height: 18px;
+        line-height: 18px;
+
+        .select2-arrow {
+          width: 14px;
+          height: 14px;
+
+          b {
+            line-height: 4px;
+            width: 12px;
+            font-size: 10px;
+
+            &:before {
+              top: 0px;
+              left: 0px;
+            }
+          }
+        }
+      }
+
+      &.select2-dropdown-open {
+        .select2-choice .select2-arrow b {
+          background-position: -20px -5px;
+        }
+      }
+    }
+
+    &.medium {
+      width: 90px;
+    }
+
+    &.select2-container-active {
+
+      .select2-choice, .select2-choices {
+        @extend %blue-focus-style;
+      }
+    }
+  }
+
+  &.select2-container-multi {
+    margin-top: 0 !important;
+
+    &.select2-container-active {
+
+      .select2-choices {
+        @extend %blue-focus-style;
+      }
+    }
+
+    .select2-choices {
+      @extend %default-input-style;
+      padding: 0 2px;
+      width: 100%;
+
+      .select2-search-choice {
+        margin: 4px;
+        padding: 4px 24px 4px 8px;
+        background-image: none;
+        border: 0 none;
+        @include box-shadow(none);
+      }
+
+      .select2-search-choice-close {
+        left: auto;
+        right: 4px;
+        top: 6px;
+        background: none;
+        @extend .icon-cross;
+
+        &:hover {
+          color: $text-color;
+        }
+      }
+
+      .select2-search-field {
+        height: 29px;
+
+        input {
+          color: $text-color;
+          padding: $default-padding 6px;
+        }
+      }
+    }
+  }
+}
+
+.tag_list {
+  .select2-container.select2-container-multi {
+    .select2-search-choice {
+      @include tag-base($margin: 4px, $padding: 4px 24px);
+    }
+  }
+}
+
+.select2-drop {
+
+  .select2-search {
+    margin: $default-margin 0;
+
+    .select2-input {
+      width: inherit;
+    }
+  }
+
+  &.select2-with-searchbox .select2-results > .select2-result:first-child {
+    @include border-top-radius(0);
+  }
+
+  .select2-results {
+    padding: 0;
+    margin: 0;
+
+    > .select2-result:first-child {
+      @include border-top-radius($default-border-radius);
+    }
+
+    &:last-child {
+      @include border-bottom-radius($default-border-radius);
+    }
+
+    .select2-result {
+      margin: 0;
+      padding: 4px 0;
+
+      &.select2-highlighted {
+        background: $button-hover-bg-color;
+        color: $text-color;
+      }
+
+      &.select2-result-with-children {
+        padding: 0;
+      }
+    }
+
+    .select2-no-results, .select2-searching {
+      padding: 8px;
+      margin: 0;
+    }
+
+    .select2-result-label {
+      padding: 4px 8px;
+    }
+
+    ul.select2-result-sub > li .select2-result-label {
+      padding-left: 16px;
+    }
+  }
+
+  &.select2-drop-active {
+    @include border-radius($default-border-radius);
+    border: 1px solid $blue;
+  }
+}
+
+.window_form, #filter_bar {
+
+  .select2-container {
+    width: 100%;
+  }
+}
+
+.select_with_label {
+  margin: 0 3*$default-margin;
+  @include inline-block(top);
+
+  label, form {
+    @include inline-block;
+  }
+
+  select { margin: 0; }
+
+  label {
+    margin-right: $default-margin;
+
+    &:after { content: ':'; }
+  }
+}
+
+// overriding important of select2 default style for retina screens
+@media only screen and (-webkit-min-device-pixel-ratio: 1.5),
+       only screen and (min-resolution: 2dppx) {
+
+  #alchemy {
+
+    .select2-search input,
+    .select2-search-choice-close,
+    .select2-container .select2-choice abbr,
+    .select2-container .select2-choice .select2-arrow b {
+       background-image: none !important;
+    }
+  }
+}

@@ -3,7 +3,7 @@ require 'rails'
 module Alchemy
   module Generators
     class Base < ::Rails::Generators::Base
-      class_option :template_engine, :type => :string, :aliases => '-e', :desc => 'Template engine for the views. Available options are "erb", "haml", and "slim".'
+      class_option :template_engine, type: :string, aliases: '-e', desc: 'Template engine for the views. Available options are "erb", "haml", and "slim".'
 
       private
 
@@ -32,7 +32,7 @@ module Alchemy
       end
 
       def load_alchemy_yaml(name)
-        YAML.load_file "#{Rails.root}/config/alchemy/#{name}"
+        YAML.load(ERB.new(File.read("#{Rails.root}/config/alchemy/#{name}")).result)
       rescue Errno::ENOENT
         puts "\nERROR: Could not read config/alchemy/#{name} file. Please run: rails generate alchemy:scaffold"
       end

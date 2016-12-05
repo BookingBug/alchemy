@@ -1,5 +1,6 @@
-require 'active_support/inflector'
+require 'active_support'
 require 'active_support/core_ext'
+require 'active_support/inflector'
 
 module Alchemy
   # = Alchemy::Resource
@@ -20,21 +21,54 @@ module Alchemy
   #
   # == Skip attributes
   #
-  # Usually you don't want your users to edit all attributes provided by a model. Hence some default attributes,
+  # Usually you don't want your users to see and edit all attributes provided by a model. Hence some default attributes,
   # namely id, updated_at, created_at, creator_id and updater_id are not returned by Resource#attributes.
   #
-  # If you want to skip a different set of attributes just define a skip_attributes class method in your model class
-  # that returns an array of strings: %W[id, updated_at]
+  # If you want to skip a different set of attributes just define a +skipped_alchemy_resource_attributes+ class method in your model class
+  # that returns an array of strings.
+  #
+  # === Example
+  #
+  #     def self.skipped_alchemy_resource_attributes
+  #       %w(id updated_at secret_token remote_ip)
+  #     end
+  #
+  # == Restrict attributes
+  #
+  # Beside skipping certain attributes you can also restrict them. Restricted attributes can not be edited by the user but still be seen in the index view.
+  # No attributes are restricted by default.
+  #
+  # === Example
+  #
+  #     def self.restricted_alchemy_resource_attributes
+  #       %w(synced_at remote_record_id)
+  #     end
+  #
+  # == Searchable attributes
+  #
+  # By default all :text and :string based attributes are searchable in the admin interface.
+  # You can overwrite this behaviour by providing a set of attribute names that should be searchable instead.
+  #
+  # === Example
+  #
+  #    def self.searchable_alchemy_resource_attributes
+  #      %w(remote_record_id firstname lastname age)
+  #    end
   #
   # == Resource relations
   #
-  # Alchemy::Resource can take care of ActiveRecord relations. You will have to announce relations by defining a
-  # resource_relations class method in your model class that returns a hash like this:
+  # Alchemy::Resource can take care of ActiveRecord relations.
   #
-  #     {
-  #       :location_id => {:attr_method => "location#name", :attr_type => :string},
-  #       :organizer_id => {:attr_method => "organizer#name", :attr_type => :string}
-  #     }
+  # === BelongsTo Relations
+  #
+  # For belongs_to associations you will have to define a +alchemy_resource_relations+ class method in your model class:
+  #
+  #     def self.alchemy_resource_relations
+  #       {
+  #         location: {attr_method: 'name', attr_type: 'string'},
+  #         organizer: {attr_method: 'name', attr_type: 'string'}
+  #       }
+  #     end
   #
   # With this knowledge Resource#attributes will return location#name and organizer#name instead of location_id
   # and organizer_id. Refer to Alchemy::ResourcesController for further details on usage.
@@ -62,19 +96,19 @@ module Alchemy
   #     resource = Resource.new('/admin/tags', {"engine_name"=>"alchemy"}, ActsAsTaggableOn::Tag)
   #
   class Resource
-    attr_accessor :skip_attributes, :resource_relations, :model_associations
+    attr_accessor :resource_relations, :model_associations
     attr_reader :model
 
-    DEFAULT_SKIPPED_ATTRIBUTES = %W[id updated_at created_at creator_id updater_id]
+    DEFAULT_SKIPPED_ATTRIBUTES = %w(id updated_at created_at creator_id updater_id)
     DEFAULT_SKIPPED_ASSOCIATIONS = %w(creator updater)
+    SEARCHABLE_COLUMN_TYPES = [:string, :text]
 
-    def initialize(controller_path, module_definition=nil, custom_model=nil)
+    def initialize(controller_path, module_definition = nil, custom_model = nil)
       @controller_path = controller_path
       @module_definition = module_definition
-      @model = (custom_model or guess_model_from_controller_path)
-      self.skip_attributes = model.respond_to?(:skip_attributes) ? model.skip_attributes : DEFAULT_SKIPPED_ATTRIBUTES
-      if model.respond_to?(:resource_relations)
-        if not model.respond_to?(:reflect_on_all_associations)
+      @model = (custom_model || guess_model_from_controller_path)
+      if model.respond_to?(:alchemy_resource_relations)
+        if !model.respond_to?(:reflect_on_all_associations)
           raise MissingActiveRecordAssociation
         end
         store_model_associations
@@ -95,15 +129,15 @@ module Alchemy
     end
 
     def namespaced_resource_name
-      return @_namespaced_resource_name unless @_namespaced_resource_name.nil?
-      resource_name_array = resource_array
-      resource_name_array.delete(engine_name) if in_engine?
-      @_namespaced_resource_name = resource_name_array.join('_').singularize
+      @_namespaced_resource_name ||= namespaced_resources_name.singularize
     end
 
-    def permission_scope
-      #(resource_namespaced? ? "#{resource_namespace.underscore}_admin_#{resources_name}" : "admin_#{resources_name}").to_sym
-      @_permission = @controller_path.gsub('/', '_').to_sym
+    def namespaced_resources_name
+      @_namespaced_resources_name ||= begin
+        resource_name_array = resource_array.dup
+        resource_name_array.delete(engine_name) if in_engine?
+        resource_name_array.join('_')
+      end
     end
 
     def namespace_for_scope
@@ -112,28 +146,56 @@ module Alchemy
       namespace_array
     end
 
+    # Returns an array of underscored association names
+    #
+    def model_association_names
+      return unless model_associations
+      model_associations.map do |assoc|
+        assoc.name.to_sym
+      end
+    end
+
     def attributes
-      @_attributes ||= self.model.columns.collect do |col|
-        unless self.skip_attributes.include?(col.name)
-          { :name => col.name, :type => resource_relation_type(col.name) || col.type, :relation => resource_relation(col.name) }.delete_if { |k, v | v.nil? }
-        end
+      @_attributes ||= model.columns.collect do |col|
+        next if skipped_attributes.include?(col.name)
+        {
+          name: col.name,
+          type: resource_column_type(col),
+          relation: resource_relation(col.name)
+        }.delete_if { |_k, v| v.nil? }
       end.compact
     end
 
-    # Returns all columns that are searchable
+    def editable_attributes
+      attributes.reject { |h| restricted_attributes.map(&:to_s).include?(h[:name].to_s) }
+    end
+
+    # Returns all attribute names that are searchable in the admin interface
     #
-    # For now it only uses string type columns
+    def searchable_attribute_names
+      if model.respond_to?(:searchable_alchemy_resource_attributes)
+        model.searchable_alchemy_resource_attributes
+      else
+        attributes.select { |a| searchable_attribute?(a) }
+          .concat(searchable_relation_attributes(attributes))
+          .collect { |h| h[:name] }
+      end
+    end
+
+    # Search field input name
     #
-    def searchable_attributes
-      self.attributes.select { |a| a[:type] == :string }
+    # Joins all searchable attribute names into a Ransack compatible search query
+    #
+    def search_field_name
+      searchable_attribute_names.join("_or_") + "_cont"
     end
 
     def in_engine?
-      not self.engine_name.nil?
+      !engine_name.nil?
     end
 
     def engine_name
-      @module_definition and @module_definition['engine_name']
+      @module_definition && @module_definition['engine_name']
     end
 
     # Returns a help text for resource's form
@@ -147,13 +209,52 @@ module Alchemy
     #           attribute_name: This is the fancy help text
     #
     def help_text_for(attribute)
-      ::I18n.translate!(attribute[:name], :scope => [:alchemy, :resource_help_texts, resource_name])
+      ::I18n.translate!(attribute[:name], scope: [:alchemy, :resource_help_texts, resource_name])
     rescue ::I18n::MissingTranslationData
       false
     end
 
+    # Return attributes that should be viewable but not editable.
+    #
+    def restricted_attributes
+      if model.respond_to?(:restricted_alchemy_resource_attributes)
+        model.restricted_alchemy_resource_attributes
+      else
+        []
+      end
+    end
 
-  private
+    # Return attributes that should neither be viewable nor editable.
+    #
+    def skipped_attributes
+      if model.respond_to?(:skipped_alchemy_resource_attributes)
+        model.skipped_alchemy_resource_attributes
+      else
+        DEFAULT_SKIPPED_ATTRIBUTES
+      end
+    end
+
+    private
+
+    def searchable_attribute?(a)
+      SEARCHABLE_COLUMN_TYPES.include?(a[:type].to_sym) && !a.key?(:relation)
+    end
+
+    def searchable_attribute_on_relation?(a)
+      a.key?(:relation) &&
+        SEARCHABLE_COLUMN_TYPES.include?(a[:relation][:attr_type].to_sym)
+    end
+
+    def searchable_relation_attributes(attrs)
+      attrs.select { |a| searchable_attribute_on_relation?(a) }.map { |a| searchable_relation_attribute(a) }
+    end
+
+    def searchable_relation_attribute(a)
+      {
+        name: "#{a[:relation][:model_association].name}_#{a[:relation][:attr_method]}",
+        type: a[:relation][:attr_type]
+      }
+    end
 
     def guess_model_from_controller_path
       resource_array.join('/').classify.constantize
@@ -171,6 +272,10 @@ module Alchemy
       resource_relation(column_name).try(:[], :attr_type)
     end
 
+    def resource_column_type(col)
+      resource_relation_type(col.name) || (col.try(:array) ? :array : col.type)
+    end
+
     def resource_relation(column_name)
       resource_relations[column_name.to_sym] if resource_relations
     end
@@ -178,15 +283,11 @@ module Alchemy
     # Expands the resource_relations hash with matching activerecord associations data.
     def map_relations
       self.resource_relations = {}
-      model.resource_relations.each do |name, options|
+      model.alchemy_resource_relations.each do |name, options|
         name = name.to_s.gsub(/_id$/, '') # ensure that we don't have an id
         association = association_from_relation_name(name)
         foreign_key = association.options[:foreign_key] || "#{association.name}_id".to_sym
-        if options[:attr_method].to_s =~ /#/
-          ActiveSupport::Deprecation.warn('Old style :attr_method used in Alchemy::Ressource#resource_relations. Please remove the # and pass column name only.', caller[2..10])
-          options[:attr_method] = options[:attr_method].split('#').last
-        end
-        self.resource_relations[foreign_key] = options.merge(:model_association => association, :name => name)
+        resource_relations[foreign_key] = options.merge(model_association: association, name: name)
       end
     end
 
@@ -199,6 +300,5 @@ module Alchemy
     def association_from_relation_name(name)
       model_associations.detect { |a| a.name == name.to_sym }
     end
-
   end
 end

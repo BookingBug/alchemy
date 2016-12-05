@@ -6,7 +6,7 @@
 
   &.add {
     background: none;
-    @extend .alchemy-icon-plus-2;
+    @extend .icon-plus-2;
     line-height: 1em;
     font-size: 19px;
   }
@@ -48,12 +48,12 @@
   }
 
   &.close {
-    background-position: -416px -40px;
+    background-position: -416px -39px;
 
     &.small {
       background: none;
-      @extend .alchemy-icon-cross;
-      line-height: 0;
+      @extend .icon-cross;
+      line-height: 1;
     }
   }
 
@@ -93,8 +93,16 @@
     background-position: -160px -168px;
   }
 
+  &.element, &.clipboard_elements {
+    background-position: -224px -72px;
+  }
+
   &.element_draft {
     background-position: 1px -70px;
+  }
+
+  &.element-hide {
+    background-position: -416px -168px;
   }
 
   &.element_public {
@@ -103,6 +111,14 @@
 
   &.element_window {
     background-position: -512px -72px;
+  }
+
+  &.element_copy {
+    background-position: -128px -72px;
+  }
+
+  &.cut {
+    background-position: -97px -72px;
   }
 
   &.error {
@@ -189,6 +205,10 @@
     background-position: -224px -105px;
   }
 
+  &.page, &.clipboard_pages {
+    background-position: 0 -40px;
+  }
+
   &.pdf {
     background-position: -161px -136px;
   }
@@ -205,6 +225,10 @@
     background-position: -64px -136px;
   }
 
+  &.remove {
+    background-position: -63px -72px;
+  }
+
   &.rtf {
     background-position: -320px -136px;
   }
@@ -212,7 +236,7 @@
   &.search {
     background: none;
     padding-top: 2px;
-    @extend .alchemy-icon-magnifying-glass;
+    @extend .icon-magnifying-glass;
   }
 
   &.select_all {
@@ -231,7 +255,7 @@
     background-position: -288px -72px;
   }
 
-  &.sync {
+  &.sync, &.reload {
     background-position: -96px -136px;
   }
 
@@ -245,7 +269,7 @@
 
   &.tag_label {
     background: none;
-    @extend .alchemy-icon-tag;
+    @extend .icon-tag;
   }
 
   &.tag_edit {
@@ -260,7 +284,7 @@
     background-position: -448px -136px;
   }
 
-  &.tick, &.true, &.notice {
+  &.tick, &.true, &.notice, &.ok {
     background-position: -32px -73px;
   }
 
@@ -289,11 +313,13 @@
   }
 
   &.visit_page {
-    background-position: -31px -137px;
+    background-position: -31px -135px;
   }
 
   &.warning, &.warn, &.alert {
     background-position: 0 -168px;
+
+    &.inline { vertical-align: baseline; }
   }
 
   &.word {

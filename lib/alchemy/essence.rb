@@ -13,7 +13,6 @@ module Alchemy #:nodoc:
     #   * several getters (ie: page, element, content, ingredient, preview_text)
     #
     module ClassMethods
-
       # Turn any active record model into an essence by calling this class method
       #
       # @option options [String || Symbol] ingredient_column ('body')
@@ -23,23 +22,34 @@ module Alchemy #:nodoc:
       # @option options [String || Symbol] preview_text_column (ingredient_column)
       #   Specify the column for the preview_text method.
       #
-      def acts_as_essence(options={})
+      def acts_as_essence(options = {})
+        register_as_essence_association!
+
         configuration = {
           ingredient_column: 'body'
         }.update(options)
 
         class_eval <<-EOV
-          attr_accessor :validation_errors
-          attr_accessible :ingredient
+          attr_writer :validation_errors
           include Alchemy::Essence::InstanceMethods
           stampable stamper_class_name: Alchemy.user_class_name
-          validate :essence_validations, :on => :update
-          has_many :contents, :as => :essence
-          has_many :elements, :through => :contents
-          has_many :pages, :through => :elements
+          validate :validate_ingredient, :on => :update, :if => 'validations.any?'
+
+          has_one :content, :as => :essence, class_name: "Alchemy::Content"
+          has_one :element, :through => :content, class_name: "Alchemy::Element"
+          has_one :page,    :through => :element, class_name: "Alchemy::Page"
+
+          scope :available,    -> { joins(:element).merge(Alchemy::Element.available) }
+          scope :from_element, ->(name) { joins(:element).where(Element.table_name => { name: name }) }
+
+          delegate :restricted?, to: :page,    allow_nil: true
+          delegate :trashed?,    to: :element, allow_nil: true
+          delegate :public?,     to: :element, allow_nil: true
+
+          after_update :touch_content
 
           def acts_as_essence_class
-            #{self.name}
+            #{name}
           end
 
           def ingredient_column
@@ -56,28 +66,38 @@ module Alchemy #:nodoc:
         EOV
       end
 
+      # Register the current class as has_many association on +Alchemy::Page+ and +Alchemy::Element+ models
+      def register_as_essence_association!
+        klass_name = model_name.to_s
+        arguments = [:has_many, klass_name.demodulize.tableize.to_sym, through: :contents,
+          source: :essence, source_type: klass_name]
+        %w(Page Element).each { |k| "Alchemy::#{k}".constantize.send(*arguments) }
+      end
     end
 
     module InstanceMethods
-
       # Essence Validations:
       #
       # Essence validations can be set inside the config/elements.yml file.
       #
-      # Currently supported validations are:
+      # Supported validations are:
       #
       # * presence
-      # * format
       # * uniqueness
+      # * format
       #
-      # If you want to validate the format you must additionally pass validate_format_as or validate_format_with:
+      # format needs to come with a regex or a predefined matcher string as its value.
+      # There are already predefined format matchers listed in the config/alchemy/config.yml file.
+      # It is also possible to add own format matchers there.
       #
-      # * validate_format_with has to be regex
-      # * validate_format_as can be one of:
-      # ** url
-      # ** email
+      # Example of format matchers in config/alchemy/config.yml:
       #
-      # Example:
+      # format_matchers:
+      #   email: !ruby/regexp '/\A[^@\s]+@([^@\s]+\.)+[^@\s]+\z/'
+      #   url:   !ruby/regexp '/\A[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?\z/ix'
+      #   ssl:   !ruby/regexp '/https:\/\/[\S]+/'
+      #
+      # Example of an element definition with essence validations:
       #
       #   - name: person
       #     contents:
@@ -86,59 +106,81 @@ module Alchemy #:nodoc:
       #       validate: [presence]
       #     - name: email
       #       type: EssenceText
-      #       validate: [format]
-      #       validate_format_as: 'email'
+      #       validate: [format: 'email']
       #     - name: homepage
       #       type: EssenceText
-      #       validate: [format]
-      #       validate_format_with: '^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$'
+      #       validate: [format: !ruby/regexp '^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$']
       #
-      def essence_validations
-        self.validation_errors ||= []
-        return true if description.blank? || description['validate'].blank?
-        description['validate'].each do |validation|
-          if validation == 'presence' && ingredient.blank?
-            self.validation_errors << :blank
-          elsif validation == 'format'
-            if description['validate_format_as'].blank? && !description['validate_format_with'].blank?
-              matcher = Regexp.new(description['validate_format_with'])
-            elsif !description['validate_format_as'].blank? && description['validate_format_with'].blank?
-              case description['validate_format_as']
-              when 'email'
-              then
-                matcher = Alchemy::Config.get(:email_regexp)
-              when 'url'
-              then
-                matcher = /^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/ix
-              else
-                raise "No validation format matcher found for #{description['validate_format_as']}"
-              end
-            else
-              raise 'No validation format matcher given'
+      # Example of an element definition with chained validations.
+      #
+      #   - name: person
+      #     contents:
+      #     - name: name
+      #       type: EssenceText
+      #       validate: [presence, uniqueness, format: 'name']
+      #
+      def validate_ingredient
+        validations.each do |validation|
+          if validation.respond_to?(:keys)
+            validation.map do |key, value|
+              send("validate_#{key}", value)
             end
-            if ingredient.to_s.match(matcher).nil?
-              self.validation_errors << :invalid
-            end
-          elsif validation == 'uniqueness' && !acts_as_essence_class.send("find_by_#{ingredient_column}", ingredient).blank?
-            self.validation_errors << :taken
+          else
+            send("validate_#{validation}")
           end
         end
-        self.validation_errors.each do |validation_error|
-          self.errors.add(self.ingredient_column, validation_error)
+      end
+
+      def validations
+        @validations ||= definition.present? ? definition['validate'] || [] : []
+      end
+
+      def validation_errors
+        @validation_errors ||= []
+      end
+
+      def validate_presence(validate = true)
+        if validate && ingredient.blank?
+          errors.add(ingredient_column, :blank)
+          validation_errors << :blank
         end
+      end
+
+      def validate_uniqueness(validate = true)
+        return if !validate || !public?
+        if duplicates.any?
+          errors.add(ingredient_column, :taken)
+          validation_errors << :taken
+        end
+      end
+
+      def validate_format(format)
+        matcher = Config.get('format_matchers')[format] || format
+        if ingredient.to_s.match(Regexp.new(matcher)).nil?
+          errors.add(ingredient_column, :invalid)
+          validation_errors << :invalid
+        end
+      end
+
+      def duplicates
+        acts_as_essence_class
+          .available
+          .from_element(element.name)
+          .where(ingredient_column.to_s => ingredient)
+          .where.not(id: id)
       end
 
       # Returns the value stored from the database column that is configured as ingredient column.
       def ingredient
-        if self.respond_to?(ingredient_column)
-          self.send(ingredient_column)
+        if respond_to?(ingredient_column)
+          send(ingredient_column)
         end
       end
 
       # Returns the value stored from the database column that is configured as ingredient column.
       def ingredient=(value)
-        if self.respond_to?(ingredient_setter_method)
-          self.send(ingredient_setter_method, value)
+        if respond_to?(ingredient_setter_method)
+          send(ingredient_setter_method, value)
         end
       end
 
@@ -147,33 +189,22 @@ module Alchemy #:nodoc:
         ingredient_column.to_s + '='
       end
 
-      # Essence description from config/elements.yml
-      def description
-        return {} if element.nil? or element.content_descriptions.nil?
-        element.content_descriptions.detect { |c| c['name'] == self.content.name } || {}
+      # Essence definition from config/elements.yml
+      def definition
+        return {} if element.nil? || element.content_definitions.nil?
+        element.content_definitions.detect { |c| c['name'] == content.name } || {}
       end
 
-      # Returns the Content Essence is in
-      def content
-        Alchemy::Content.find_by_essence_type_and_essence_id(acts_as_essence_class.to_s, self.id)
-      end
-
-      # Returns the Element Essence is in
-      def element
+      # Touch content. Called after update.
+      def touch_content
         return nil if content.nil?
-        content.element
-      end
-
-      # Returns the Page Essence is on
-      def page
-        return nil if element.nil?
-        element.page
+        content.touch
       end
 
       # Returns the first x (default 30) characters of ingredient for the Element#preview_text method.
       #
       def preview_text(maxlength = 30)
-        self.send(preview_text_column).to_s[0..maxlength-1]
+        send(preview_text_column).to_s[0..maxlength - 1]
       end
 
       def open_link_in_new_window?
@@ -185,15 +216,17 @@ module Alchemy #:nodoc:
       end
 
       def acts_as_essence?
-        !acts_as_essence_class.blank?
+        acts_as_essence_class.present?
       end
 
       def to_partial_path
         "alchemy/essences/#{partial_name}_view"
       end
 
+      def has_tinymce?
+        false
+      end
     end
-
   end
 end
 ActiveRecord::Base.class_eval { include Alchemy::Essence } if defined?(Alchemy::Essence)

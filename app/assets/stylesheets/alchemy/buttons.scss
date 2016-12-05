@@ -1,0 +1,265 @@
+button, input[type="submit"], a.button, input.button {
+  @include button-defaults;
+
+  &.small {
+    padding: $default-padding 3*$default-padding;
+    vertical-align: inherit;
+    line-height: 4*$default-padding;
+    font-size: inherit;
+
+    &.with_icon {
+      padding: $default-padding 3*$default-padding $default-padding 6px;
+    }
+  }
+
+  &.with_icon {
+    padding: 6px 18px 6px 6px;
+
+    span.icon {
+      margin-top: -5px;
+      padding-right: 0.25em;
+      height: 15px;
+    }
+  }
+
+  &.icon_only {
+    margin: 0;
+    padding: 0;
+    border: 0 none;
+    @include box-shadow(none);
+    @include background(none);
+    @include border-radius(0);
+
+    .icon {
+      margin: 0;
+    }
+  }
+
+  &:focus {
+    @extend %blue-focus-style;
+  }
+
+  &.disabled {
+    line-height: 13px;
+    height: 29px;
+    padding-top: 5px;
+    padding-bottom: 4px;
+  }
+}
+
+.icon_button {
+  @include box-sizing(border-box);
+  width: 27px;
+  height: 27px;
+  line-height: 21px;
+  margin: 0;
+  padding: 3px;
+  overflow: hidden;
+  text-align: center;
+
+  .spinner {
+    left: 50% !important; // the spin.js lib calculates false!
+    top: 50% !important;
+  }
+
+  .icon {
+    @include inline-block;
+    margin-top: -2px;
+  }
+
+  .old_icon {
+    position: relative;
+    background-repeat: no-repeat;
+    width: 22px;
+    height: 20px;
+    @include inline-block;
+    top: -1px;
+    left: -1px;
+  }
+
+  img {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+  }
+
+  &.small {
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    float: none;
+    @include inline-block;
+    position: relative;
+    top: 0px;
+    background: none;
+    border: none;
+    @include box-shadow(none);
+
+    .icon {
+      position: absolute;
+      top: 50%;
+      height: 8px;
+      @include transform(translateX(-50%) translateY(-50%));
+
+      &:before {
+        line-height: 10px;
+      }
+
+      &.delete-small {
+        background-position: -4px -76px;
+      }
+    }
+
+    &:hover {
+      border: $default-border-width $default-border-style $button-hover-border-color;
+      @include border-radius($default-border-radius);
+      background: $button-hover-bg-color;
+    }
+  }
+
+  &.old_icon {
+    width: 20px;
+    height: 19px;
+
+    img {
+      top: 0;
+      left: 1px;
+    }
+  }
+
+  &.disabled {
+
+    span {
+      position: relative;
+      @include opacity(0.3);
+      cursor: default;
+    }
+
+    &:hover {
+      background-color: #d3d3d3;
+      border: 1px solid $button-border-color;
+      cursor: default;
+    }
+  }
+
+  &.linked {
+    @include linked-button;
+  }
+
+  &:focus {
+    @extend %blue-focus-style;
+  }
+}
+
+button.icon_button {
+  background: transparent;
+  border: 0 none;
+  @include border-radius(0);
+  @include box-shadow(none);
+
+  &:disabled, &.disabled {
+    background: transparent;
+  }
+}
+
+#new_element button.button {
+  float: right;
+}
+
+.button_with_label {
+  position: relative;
+  @include inline-block(top);
+  text-align: center;
+  margin: 0 2*$default-margin;
+  line-height: 0;
+
+  &.active, &:active {
+
+    .icon_button {
+      background-color: darken($sb-base-color, 10%);
+      border: $default-border;
+      padding: 2px;
+      @extend %rounded-border;
+    }
+  }
+
+  &:hover .icon_button {
+    border: $default-border;
+    padding: 2px;
+    @extend %rounded-border;
+    cursor: pointer;
+
+    &:focus {
+      border: 0;
+      padding: 3px;
+    }
+  }
+
+  .select2-container,
+  select {
+    margin: 0;
+    top: 0;
+  }
+
+  .icon_button {
+    float: none;
+    margin-right: auto;
+    margin-left: auto;
+    @include inline-block;
+    position: relative;
+  }
+
+  &.disabled {
+    @include opacity(0.5);
+    cursor: default;
+  }
+}
+
+.button_with_label, .button_group {
+
+  .icon_button {
+    width: 29px;
+    height: 29px;
+    line-height: 23px;
+  }
+
+  label {
+    display: none;
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    margin-left: -13px;
+    z-index: 30;
+    background: $dark-gray;
+    color: #fff;
+    padding: $default-padding 2*$default-padding;
+    @extend %rounded-border;
+    line-height: 1;
+    @include box-shadow(0 0 4px $default-border-color);
+    white-space: nowrap;
+    pointer-events: none;
+
+    &:before {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 8px;
+      border: 5px transparent solid;
+      border-top-color: $dark-gray;
+    }
+
+    &.right-aligned {
+      left: auto;
+      margin-left: auto;
+      right: 50%;
+      margin-right: -13px;
+
+      &:before {
+        left: auto;
+        right: 8px;
+      }
+    }
+  }
+
+  &:hover label { display: block }
+}
