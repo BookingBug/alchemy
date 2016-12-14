@@ -26,7 +26,7 @@ module Alchemy
         @page = Page.find(params[:page_id])
         @parent_element = Element.find_by(id: params[:parent_element_id])
         @parent_parent_element = Element.find_by(id: @parent_element.try(:parent_element_id))
-        @elements = @page.available_element_definitions(@parent_element.try(:name)) - (!@parent_parent_element.nil? && @parent_parent_element.name == @parent_element.name ? [Alchemy::Element.definition_by_name(@parent_parent_element.name)] : [])
+        @elements = @page.available_element_definitions(@parent_element.try(:name)) - (@parent_parent_element.try(:name) == @parent_element.name ? [Alchemy::Element.definition_by_name(@parent_parent_element.name)] : [])
         @element = @page.elements.build
         @clipboard = get_clipboard('elements')
         @clipboard_items = Element.all_from_clipboard_for_page(@clipboard, @page)
