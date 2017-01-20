@@ -25,7 +25,8 @@ module Alchemy
       def new
         @page = Page.find(params[:page_id])
         @parent_element = Element.find_by(id: params[:parent_element_id])
-        @elements = @page.available_element_definitions(@parent_element.try(:name))
+        @parent_parent_element = Element.find_by(id: @parent_element.try(:parent_element_id))
+        @elements = @page.available_element_definitions(@parent_element.try(:name)) - (@parent_parent_element.try(:name) == @parent_element.try(:name) && !@parent_parent_element.try(:name).nil? && !@parent_element.try(:name).nil? ? [Alchemy::Element.definition_by_name(@parent_parent_element.name)] : [])
         @element = @page.elements.build
         @clipboard = get_clipboard('elements')
         @clipboard_items = Element.all_from_clipboard_for_page(@clipboard, @page)
@@ -113,6 +114,10 @@ module Alchemy
       end
 
       private
+
+      def nestable_elements_definitions
+
+      end
 
       def load_element
         @element = Element.find(params[:id])

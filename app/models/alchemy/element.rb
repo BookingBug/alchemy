@@ -294,7 +294,11 @@ module Alchemy
 
     # A collection of element names that can be nested inside this element.
     def nestable_elements
-      definition.fetch('nestable_elements', [])
+      # if (!parent_element.nil?)
+      #   definition.fetch('nestable_elements', []) - [Alchemy::Element.definition_by_name(parent_element.name)["name"]] if parent_element.name == name
+      # else
+        definition.fetch('nestable_elements', [])
+      # end
     end
 
     # Copy all nested elements from current element to given target element.

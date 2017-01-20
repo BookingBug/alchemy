@@ -66,9 +66,13 @@ module Alchemy
     def show
 
       # puts @page.inspect
-      if params[:urlname] == 'home'
-         redirect_to root_path, :status => 301 and return 
-      end
+
+      #logger.info 'whats going on fellas'
+      #logger.info params[:urlname]
+
+      # if params[:urlname] == 'home'
+      #    redirect_to '', :status => 301 and return 
+      # end
 
       if redirect_url.present?
         redirect_permanently_to redirect_url
@@ -89,10 +93,10 @@ module Alchemy
     private
 
     def set_current_language
-        if !Rails.env.development?
-          RequestStore.store[:alchemy_current_language] = Language.find_by(country_code: request.domain.include?('co.uk') ? 'uk' : 'us')
+        if !Rails.env.development? && request.domain != 'publicdev.bookingbug.com'
+          return RequestStore.store[:alchemy_current_language] = Language.find_by(country_code: request.domain.include?('co.uk') ? 'uk' : 'us')
         else 
-          RequestStore.store[:alchemy_current_language] = Language.find_by(country_code:'us')
+          return RequestStore.store[:alchemy_current_language] = Language.find_by(country_code:'us')
         end
     end
 
