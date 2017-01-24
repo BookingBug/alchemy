@@ -6,6 +6,7 @@ module Alchemy
     include SiteRedirects
     include LocaleRedirects
 
+    before_action :set_current_language
     before_action :load_index_page, only: [:index]
     before_action :load_page, only: [:show]
 
@@ -80,6 +81,14 @@ module Alchemy
     end
 
     private
+
+    def set_current_language
+        if !Rails.env.development? && request.domain != 'publicdev.bookingbug.com'
+          RequestStore.store[:alchemy_current_language] = Language.find_by(country_code: request.domain.include?('co.uk') ? 'uk' : 'us')
+        else 
+          RequestStore.store[:alchemy_current_language] = Language.find_by(country_code:'us')
+        end
+    end
 
     # == Loads index page
     #
