@@ -1,10 +1,15 @@
 # Change Log
 
-## 3.4.2 (unreleased)
+## 3.4.2 (2016-12-22)
 
 __Notable Changes__
 
 * Allow users to manually publish changes on global pages
+
+__Fixed Bugs__
+
+* The `language_links` helper now only renders languages from the current site
+* Fixes alchemy module generator (#1159)
 
 ## 3.4.1 (2016-08-31)
 

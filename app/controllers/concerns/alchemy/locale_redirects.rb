@@ -31,7 +31,8 @@ module Alchemy
     # then we want to redirect to a non prefixed url.
     #
     def locale_prefix_not_allowed?
-      params[:locale].present? && !multi_language? || params[:locale].presence == ::I18n.default_locale.to_s
+      params[:locale].present? && !multi_language? ||
+        params[:locale].presence == ::I18n.default_locale.to_s
     end
   end
 end

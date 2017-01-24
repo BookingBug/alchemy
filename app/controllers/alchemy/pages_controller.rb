@@ -6,7 +6,6 @@ module Alchemy
     include SiteRedirects
     include LocaleRedirects
 
-    before_action :set_current_language
     before_action :load_index_page, only: [:index]
     before_action :load_page, only: [:show]
 
@@ -64,16 +63,6 @@ module Alchemy
     # descendant it finds. If no public page can be found it renders a 404 error.
     #
     def show
-
-      # puts @page.inspect
-
-      #logger.info 'whats going on fellas'
-      #logger.info params[:urlname]
-
-      # if params[:urlname] == 'home'
-      #    redirect_to '', :status => 301 and return 
-      # end
-
       if redirect_url.present?
         redirect_permanently_to redirect_url
       else
@@ -91,14 +80,6 @@ module Alchemy
     end
 
     private
-
-    def set_current_language
-        if !Rails.env.development? && request.domain != 'publicdev.bookingbug.com'
-          return RequestStore.store[:alchemy_current_language] = Language.find_by(country_code: request.domain.include?('co.uk') ? 'uk' : 'us')
-        else 
-          return RequestStore.store[:alchemy_current_language] = Language.find_by(country_code:'us')
-        end
-    end
 
     # == Loads index page
     #

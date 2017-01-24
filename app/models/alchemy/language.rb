@@ -65,8 +65,7 @@ module Alchemy
 
       # Current language from current thread or default.
       def current
-        # default
-        RequestStore.store[:alchemy_current_language]
+        RequestStore.store[:alchemy_current_language] || default
       end
 
       # The root page of the current language.
@@ -74,18 +73,8 @@ module Alchemy
         current.pages.language_roots.first
       end
 
-      # Fetch country code based on domain name
-      # def current_country
-      #   if !Rails.env.development?
-      #     request.domain.include?('co.uk') ? 'uk' : 'us'
-      #   else 
-      #     'uk'
-      #   end
-      # end
-
       # Default language for current site
       def default
-        # on_current_site.find_by(country_code: current_country)
         on_current_site.find_by(default: true)
       end
     end

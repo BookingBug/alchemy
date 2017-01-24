@@ -1,12 +1,33 @@
 language: ruby
+sudo: false
+cache: bundler
 rvm:
-  - 1.9.3
-  - 2.0
-  - 2.1
+- 2.1
+- 2.2
+- 2.3.0
 branches:
   only:
-    - 2.9-stable
-script: rake
+    - 3.4-stable
+before_install:
+  - gem install bundler
+before_script: bundle exec rake alchemy:spec:prepare
+script: bundle exec rspec
+after_success: bundle exec codeclimate-test-reporter
 env:
-  - DB=mysql
-  - DB=postgresql
+- DB=mysql
+- DB=postgresql
+notifications:
+  irc:
+    on_success: change
+    on_failure: always
+    use_notice: true
+    channels:
+    - irc.freenode.org#alchemy_cms
+  slack:
+    secure: QzOFw1Ph69pzwWBFgtIVkOnjbcRxB9HPRQ+RYjK+2tg+fsbiTJ+wYgHcZL49tPYcLAls4kymkFWzWBF3PCAXJMfKgUCqXzdQ2FuJC/JoVRTLll4wDnZFPG33jsm5tVznmycZ3ma4+ZWfJQ+C+elEBOba6v1kG9eGIy6sH2cvXfE=
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/4dc02992aca8b4fd883b
+    on_success: always
+    on_failure: always
+    on_start: never
