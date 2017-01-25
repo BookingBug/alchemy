@@ -15,9 +15,10 @@ module Alchemy
     end
 
     # Returns true if more than one language is published on current site.
-    #
+    # THIS PART WAS CHANGED TO DISABLE THE LOCALE APPEARING IN THE URL
+    # IT'S THIS ONE TINY OPTION BUT IT'S REALLY IMPORTANT?
     def multi_language?
-      Language.on_current_site.published.count > 1
+      false
     end
 
     # Decides if the locale should be prefixed to urls
