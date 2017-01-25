@@ -83,11 +83,16 @@ module Alchemy
     private
 
     def set_current_language
+
+        logger.info 'is this not working anymore thats disappointing? i thought this would fix it?'
+
         if !Rails.env.development? && request.domain != 'publicdev.bookingbug.com'
           RequestStore.store[:alchemy_current_language] = Language.find_by(country_code: request.domain.include?('co.uk') ? 'uk' : 'us')
         else 
           RequestStore.store[:alchemy_current_language] = Language.find_by(country_code:'us')
         end
+
+        logger.info Language.current
     end
 
     # == Loads index page
@@ -116,7 +121,7 @@ module Alchemy
     def load_page
       @page ||= Language.current.pages.contentpages.find_by(
         urlname: params[:urlname],
-        language_code: params[:locale] || Language.current.code
+        language_code: Language.current.code
       )
     end
 

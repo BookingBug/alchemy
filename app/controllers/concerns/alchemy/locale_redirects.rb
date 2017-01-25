@@ -32,7 +32,7 @@ module Alchemy
     #
     def locale_prefix_not_allowed?
       params[:locale].present? && !multi_language? ||
-        params[:locale].presence == ::I18n.default_locale.to_s
+      params[:locale].presence == ::I18n.default_locale.to_s
     end
   end
 end

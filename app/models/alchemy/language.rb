@@ -65,7 +65,7 @@ module Alchemy
 
       # Current language from current thread or default.
       def current
-        RequestStore.store[:alchemy_current_language] || default
+        RequestStore.store[:alchemy_current_language]
       end
 
       # The root page of the current language.

@@ -63,11 +63,13 @@ module Alchemy
     end
 
     def default_locale?
-      Language.current.code.to_sym == ::I18n.default_locale.to_sym
+      true
+      #Language.current.code.to_sym == ::I18n.default_locale.to_sym
     end
 
     def locale_prefix_missing?
-      multi_language? && params[:locale].blank? && !default_locale?
+      false
+      #multi_language? && params[:locale].blank? && !default_locale?
     end
   end
 end
