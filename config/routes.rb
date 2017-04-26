@@ -3,6 +3,8 @@ require 'alchemy/routing_constraints'
 Alchemy::Engine.routes.draw do
   root to: 'pages#index'
 
+  get '/home' => redirect("/")
+
   get '/sitemap.xml' => 'pages#sitemap', format: 'xml'
 
   scope Alchemy.admin_path, {constraints: Alchemy.admin_constraints} do
