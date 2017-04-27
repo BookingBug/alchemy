@@ -6,7 +6,7 @@ module Alchemy
     include SiteRedirects
     include LocaleRedirects
 
-    # before_action :redirect_to_root_if_root_page_without_appending_page_name, only: [:show]
+    before_action :redirect_to_root_if_root_page_without_appending_page_name, only: [:show]
     before_action :set_current_language
     before_action :load_index_page, only: [:index]
     before_action :load_page, only: [:show]
@@ -33,8 +33,6 @@ module Alchemy
     rescue_from ActionController::UnknownFormat, with: :page_not_found!
 
     def redirect_to_root_if_root_page_without_appending_page_name
-      logger.info urlname
-      logger.info 'hello'
       if Language.current.pages.contentpages.find_by(urlname: params[:urlname], language_code: Language.current.code).try(:language_root) 
         redirect_to "/" and return
       end
