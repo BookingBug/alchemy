@@ -2,8 +2,8 @@ module Alchemy
   class PagesController < Alchemy::BaseController
     include OnPageLayout::CallbacksRunner
     include ActionController::Caching::Pages
-    self.page_cache_directory = "#{Rails.root.to_s}/public/page_cache"
-
+    # self.page_cache_directory = "#{Rails.root.to_s}/public/page_cache"
+    self.page_cache_directory = "#{Rails.root.to_s}/app/views/page_cache"
     # Redirecting concerns. Order is important here!
     include SiteRedirects
     include LocaleRedirects

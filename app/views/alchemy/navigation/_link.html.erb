@@ -9,7 +9,7 @@
 <% else %>
   <%= link_to(
     h(page.name),
-    @preview_mode ? 'javascript: void(0)' : show_alchemy_page_path(page),
+    show_alchemy_page_path(page)
     {
       class: (page_active?(page) ? 'active' : nil),
       title: (options[:show_title] ? page.title : nil),
