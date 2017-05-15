@@ -36,6 +36,8 @@ end
 # We need this if we want to start the dummy app in development mode
 group :development, :production do
   gem 'quiet_assets'
+  gem 'actionpack-page_caching'
+  gem 'actionpack-action_caching'
 end
 
 # We need this if we want to start the dummy app in production, ie on Teatro.io
