@@ -36,7 +36,7 @@ module Alchemy
 
     rescue_from ActionController::UnknownFormat, with: :page_not_found!
 
-    caches_page :show, :index, if: -> {/(admin)/.match(request.url).nil?}
+    caches_page :show, :index, if: -> {(/(admin)/.match(request.url).nil?) && (/(home)/.match(request.url).nil?)}
 
     def redirect_to_root_if_root_page_without_appending_page_name
       if Language.current.pages.contentpages.find_by(urlname: params[:urlname], language_code: Language.current.code).try(:language_root) 
