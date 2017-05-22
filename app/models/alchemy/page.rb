@@ -404,9 +404,22 @@ module Alchemy
       end
 
       update_columns(hash)
+
+      # for caching purposes since the method used here does not update the updated_at field, this is hacky hardcoded way to invalidate the entire
+      # cache so that any changes made to the structure of the site will be reflected in the navbars in the footer and header, as this will only run
+      # once per restructure - which in of itself is fairly infrequent - the impact on performance it has is minimal and it's only one of two parts of
+      # of the public site which would benefit from russian doll caching (the other being marketo forms) but even then saving the entire page as html
+      # is still faster in exchange for one intitally slow load
+
+      FileUtils.rm_rf("#{Rails.root.to_s}/app/views/page_cache/#{bb_language_code}/") if File.exists?("#{Rails.root.to_s}/app/views/page_cache/#{bb_language_code}/")
     end
 
     private
+
+    def bb_language_code
+      self.language_code.length == 5 ? self.language_code[3..4] : self.language_code
+    end
+
 
     # Returns the next or previous page on the same level or nil.
     #
