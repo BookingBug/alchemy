@@ -411,7 +411,9 @@ module Alchemy
       # of the public site which would benefit from russian doll caching (the other being marketo forms) but even then saving the entire page as html
       # is still faster in exchange for one intitally slow load
 
-      FileUtils.rm_rf("#{Rails.root.to_s}/app/views/page_cache/#{bb_language_code}/") if File.exists?("#{Rails.root.to_s}/app/views/page_cache/#{bb_language_code}/")
+      Dir.foreach(Rails.root.to_s.split('releases')[0] + "/webcache/#{bb_language_code}/"){|f| File.delete(Rails.root.to_s.split('releases')[0] + "/webcache/#{bb_language_code}/" + f)  if /(\.html)/.match(f) }
+
+      # FileUtils.rm_rf("#{Rails.root.to_s}/app/views/page_cache/#{bb_language_code}/") if File.exists?("#{Rails.root.to_s}/app/views/page_cache/#{bb_language_code}/")
     end
 
     private
