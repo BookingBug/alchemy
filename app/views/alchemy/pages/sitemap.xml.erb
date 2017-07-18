@@ -2,5 +2,6 @@
 <url>
   <loc><%= show_alchemy_page_url(page) %></loc>
   <lastmod><%= page.updated_at.utc.iso8601 %></lastmod>
+  <priority><%= (1.to_f / (page.depth).to_f).round(1) %></priority>
 </url>
 <%- end -%>
