@@ -10,7 +10,7 @@ module Alchemy
     include SiteRedirects
     include LocaleRedirects
 
-    before_action :redirect_to_root_if_root_page_without_appending_page_name, only: [:show]
+    #before_action :redirect_to_root_if_root_page_without_appending_page_name, only: [:show]
     before_action :set_current_language
     before_action :load_index_page, only: [:index]
     before_action :load_page, only: [:show]
